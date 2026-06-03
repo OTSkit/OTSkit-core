@@ -1,6 +1,7 @@
 {
   "name": "@otskit/core",
   "version": "0.0.0",
+  "engines": { "node": ">=20.0.0" },
   "description": "OpenTimestamps core library — TypeScript, zero-dependency, fail-closed.",
   "type": "module",
   "main": "./dist/index.cjs",
