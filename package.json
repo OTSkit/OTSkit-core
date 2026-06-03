@@ -24,7 +24,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/node": "^22.8.7",
+    "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^2.1.9",
     "fast-check": "^4.3.0",
     "tsup": "^8.3.5",
