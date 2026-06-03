@@ -1,3 +1,7 @@
+<p align="center">
+  <img src=".github/assets/logo.png" alt="OTSkit Core" width="400" />
+</p>
+
 # @otskit/core
 
 [![CI](https://github.com/OTSkit/OTSkit-core/actions/workflows/ci.yml/badge.svg)](https://github.com/OTSkit/OTSkit-core/actions/workflows/ci.yml)
