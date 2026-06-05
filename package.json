@@ -6,6 +6,11 @@
   },
   "license": "MIT",
   "description": "OpenTimestamps core library — TypeScript, zero-dependency, fail-closed.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OTSkit/OTSkit-core.git"
+  },
+  "homepage": "https://github.com/OTSkit/OTSkit-core#readme",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
