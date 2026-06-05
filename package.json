@@ -4,6 +4,7 @@
   "engines": {
     "node": ">=20.0.0"
   },
+  "license": "MIT",
   "description": "OpenTimestamps core library — TypeScript, zero-dependency, fail-closed.",
   "type": "module",
   "main": "./dist/index.cjs",
