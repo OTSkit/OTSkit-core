@@ -36,7 +36,7 @@ export {
   verifyAgainstRawHeader,
   verifyBitcoinAttestation,
 } from './notary.js';
-export type { Branch } from './timestamp.js';
+export type { Branch, BlockHeaderProvider } from './timestamp.js';
 export { Timestamp } from './timestamp.js';
 export { makeMerkleTree } from './merkle.js';
 export { DetachedTimestampFile } from './detached-timestamp-file.js';

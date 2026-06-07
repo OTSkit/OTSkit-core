@@ -3,10 +3,12 @@ import { StreamDeserializationContext, StreamSerializationContext } from './cont
 import { Op } from './ops.js';
 import {
   type Attestation,
+  type BitcoinAttestation,
   deserializeAttestation,
   serializeAttestation,
   compareAttestations,
   attestationsEqual,
+  verifyBitcoinAttestation,
 } from './notary.js';
 import { bytesEqual, bytesToHex, compareBytes } from './utils.js';
 import {
@@ -14,7 +16,14 @@ import {
   DeserializationError,
   EmptyTimestampError,
   MergeError,
+  VerificationError,
 } from './errors.js';
+
+/** Proveedor de cabeceras de bloque crudas. El caller gestiona la red; `@otskit/core` no hace fetch. */
+export interface BlockHeaderProvider {
+  /** Devuelve los 80 bytes crudos del header del bloque a la altura indicada. */
+  getBlockHeader(height: number): Promise<Uint8Array>;
+}
 
 /** Profundidad máxima del árbol al deserializar (defensa contra stack overflow). */
 const MAX_TREE_DEPTH = 256;
@@ -225,11 +234,37 @@ export class Timestamp {
     return this.allAttestations().map((entry) => entry.attestation);
   }
 
-  /** Verdadero si el árbol contiene una attestation verificable localmente (Bitcoin/Litecoin). */
+  /** Verdadero si el árbol contiene al menos una attestation Bitcoin. Solo comprueba presencia, no criptografía. */
+  hasBitcoinAttestation(): boolean {
+    return this.allAttestations().some(({ attestation }) => attestation.kind === 'bitcoin');
+  }
+
+  /**
+   * @deprecated Usa `hasBitcoinAttestation()` para comprobar presencia, o `verifyBitcoin(provider)`
+   * para verificación criptográfica real. Esta función solo comprueba presencia de datos (no verifica).
+   */
   isTimestampComplete(): boolean {
     return this.allAttestations().some(
       ({ attestation }) => attestation.kind === 'bitcoin' || attestation.kind === 'litecoin',
     );
+  }
+
+  /**
+   * Verificación criptográfica real: localiza la primera attestation Bitcoin del árbol y comprueba
+   * que el digest del nodo coincide con el merkle root del header a esa altura.
+   * El caller aporta el provider; esta función no hace ningún fetch de red.
+   * @returns block.time del bloque confirmador
+   * @throws VerificationError si no hay attestation Bitcoin o la verificación falla
+   */
+  async verifyBitcoin(provider: BlockHeaderProvider): Promise<number> {
+    for (const { msg, attestation } of this.allAttestations()) {
+      if (attestation.kind === 'bitcoin') {
+        const att = attestation as BitcoinAttestation;
+        const rawHeader = await provider.getBlockHeader(att.height);
+        return verifyBitcoinAttestation(msg, att, rawHeader, att.height);
+      }
+    }
+    throw new VerificationError('no Bitcoin attestation found in timestamp tree');
   }
 
   /** Sub-timestamps que tienen attestations directas. */

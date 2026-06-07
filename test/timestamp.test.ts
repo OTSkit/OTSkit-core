@@ -1,16 +1,19 @@
 // test/timestamp.test.ts
 import { describe, it, expect } from 'vitest';
 import { Timestamp } from '../src/timestamp.js';
+import type { BlockHeaderProvider } from '../src/timestamp.js';
 import { Op, OpSHA256, OpSHA1, OpAppend, OpPrepend, OpReverse } from '../src/ops.js';
 import { StreamDeserializationContext, StreamSerializationContext } from '../src/context.js';
 import { makePending, makeBitcoin, makeLitecoin, makeUnknown, serializeAttestation } from '../src/notary.js';
 import type { Attestation } from '../src/notary.js';
+import { hexToBytes } from '../src/utils.js';
 import {
   TruncatedStreamError,
   OversizedDataError,
   DeserializationError,
   EmptyTimestampError,
   MergeError,
+  VerificationError,
 } from '../src/errors.js';
 
 // ─── helpers de test ───────────────────────────────────────────────────────────
@@ -410,5 +413,74 @@ describe('Timestamp — addExisting (cross-link Merkle)', () => {
     const left = new Timestamp(new Uint8Array([0x11]));
     // @ts-expect-error tipo inválido deliberado
     expect(() => left.addExisting(new OpAppend(new Uint8Array([0x22])), {})).toThrow(TypeError);
+  });
+});
+
+// ─── M2: hasBitcoinAttestation / verifyBitcoin ────────────────────────────────
+
+// Bloque génesis de Bitcoin (80 bytes, mismo vector que en notary.test.ts)
+const GENESIS_RAW_HEADER_HEX_TS =
+  '01000000' +
+  '0000000000000000000000000000000000000000000000000000000000000000' +
+  '3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a' +
+  '29ab5f49' +
+  'ffff001d' +
+  '1dac2b7c';
+const GENESIS_RAW_HEADER = hexToBytes(GENESIS_RAW_HEADER_HEX_TS);
+const GENESIS_MERKLE_ROOT_INTERNAL = hexToBytes(
+  '3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a',
+);
+const GENESIS_TIME = 1231006505;
+
+describe('Timestamp — hasBitcoinAttestation (M2)', () => {
+  it('devuelve true si hay una attestation Bitcoin en el árbol', () => {
+    const ts = new Timestamp(new Uint8Array(32));
+    ts.addAttestation(makeBitcoin(100));
+    expect(ts.hasBitcoinAttestation()).toBe(true);
+  });
+
+  it('devuelve false si solo hay attestations pending', () => {
+    const ts = new Timestamp(new Uint8Array(32));
+    ts.addAttestation(makePending('https://a.pool.opentimestamps.org'));
+    expect(ts.hasBitcoinAttestation()).toBe(false);
+  });
+
+  it('isTimestampComplete() sigue funcionando igual (backward compat)', () => {
+    const ts = new Timestamp(new Uint8Array(32));
+    ts.addAttestation(makeBitcoin(1));
+    expect(ts.isTimestampComplete()).toBe(true);
+    const pending = new Timestamp(new Uint8Array(32));
+    pending.addAttestation(makePending('https://a.pool.opentimestamps.org'));
+    expect(pending.isTimestampComplete()).toBe(false);
+  });
+});
+
+describe('Timestamp — verifyBitcoin (M2)', () => {
+  it('devuelve block.time cuando el provider devuelve el header correcto', async () => {
+    const ts = new Timestamp(GENESIS_MERKLE_ROOT_INTERNAL);
+    ts.addAttestation(makeBitcoin(0));
+    const provider: BlockHeaderProvider = {
+      getBlockHeader: async (_height: number) => GENESIS_RAW_HEADER,
+    };
+    await expect(ts.verifyBitcoin(provider)).resolves.toBe(GENESIS_TIME);
+  });
+
+  it('lanza VerificationError cuando el provider devuelve un header erróneo', async () => {
+    const ts = new Timestamp(GENESIS_MERKLE_ROOT_INTERNAL);
+    ts.addAttestation(makeBitcoin(0));
+    const wrongHeader = new Uint8Array(80); // todo ceros → merkle root y time no coinciden
+    const provider: BlockHeaderProvider = {
+      getBlockHeader: async (_height: number) => wrongHeader,
+    };
+    await expect(ts.verifyBitcoin(provider)).rejects.toThrow(VerificationError);
+  });
+
+  it('lanza VerificationError cuando no hay ninguna attestation Bitcoin en el árbol', async () => {
+    const ts = new Timestamp(new Uint8Array(32));
+    ts.addAttestation(makePending('https://a.pool.opentimestamps.org'));
+    const provider: BlockHeaderProvider = {
+      getBlockHeader: async () => new Uint8Array(80),
+    };
+    await expect(ts.verifyBitcoin(provider)).rejects.toThrow(VerificationError);
   });
 });
