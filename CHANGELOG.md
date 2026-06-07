@@ -1,3 +1,10 @@
+## [0.1.6](https://github.com/OTSkit/OTSkit-core/compare/v0.1.5...v0.1.6) (2026-06-07)
+
+
+### Bug Fixes
+
+* hardcode app client-id and guard dispatch on token availability ([760d1a6](https://github.com/OTSkit/OTSkit-core/commit/760d1a69d8757d00b5314c793b36502b9ab7a739))
+
 ## [0.1.5](https://github.com/OTSkit/OTSkit-core/compare/v0.1.4...v0.1.5) (2026-06-07)
 
 
