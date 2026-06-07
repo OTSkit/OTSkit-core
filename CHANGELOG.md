@@ -1,3 +1,10 @@
+## [0.1.7](https://github.com/OTSkit/OTSkit-core/compare/v0.1.6...v0.1.7) (2026-06-07)
+
+
+### Bug Fixes
+
+* use contents:write permission for repository_dispatch token ([1ee0065](https://github.com/OTSkit/OTSkit-core/commit/1ee0065a154448b20deec1bb8eb5aa26302eccbb))
+
 ## [0.1.6](https://github.com/OTSkit/OTSkit-core/compare/v0.1.5...v0.1.6) (2026-06-07)
 
 
