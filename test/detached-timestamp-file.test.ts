@@ -11,6 +11,7 @@ import {
   TrailingGarbageError,
   TruncatedStreamError,
   DeserializationError,
+  WeakHashError,
 } from '../src/errors.js';
 
 // --- Vector .ots CANÓNICO (121 bytes), derivado del formato real (NO de esta librería) ---
@@ -160,6 +161,46 @@ describe('DetachedTimestampFile — fromBytes / fromHash', () => {
 
   it('fromHash valida la longitud del digest contra el op', () => {
     expect(() => DetachedTimestampFile.fromHash(new OpSHA256(), new Uint8Array(20))).toThrow(TypeError);
+  });
+});
+
+describe('DetachedTimestampFile — bloqueo SHA-1/RIPEMD-160 en creación (M3)', () => {
+  it('fromBytes con OpSHA1 lanza WeakHashError', () => {
+    expect(() => DetachedTimestampFile.fromBytes(new OpSHA1(), new Uint8Array(10))).toThrow(WeakHashError);
+  });
+
+  it('fromBytes con OpRIPEMD160 lanza WeakHashError', () => {
+    expect(() => DetachedTimestampFile.fromBytes(new OpRIPEMD160(), new Uint8Array(10))).toThrow(WeakHashError);
+  });
+
+  it('fromBytesWithHashOp con OpSHA1 sin flag lanza WeakHashError', () => {
+    expect(() => DetachedTimestampFile.fromBytesWithHashOp(new OpSHA1(), new Uint8Array(10))).toThrow(WeakHashError);
+  });
+
+  it('fromBytesWithHashOp con OpSHA1 y allowWeakHashForLegacyInterop:true permite crear', () => {
+    const dtf = DetachedTimestampFile.fromBytesWithHashOp(new OpSHA1(), new Uint8Array(10), { allowWeakHashForLegacyInterop: true });
+    expect(dtf.fileHashOp).toBeInstanceOf(OpSHA1);
+    expect(dtf.fileDigest().length).toBe(20);
+  });
+
+  it('fromBytesWithHashOp con OpRIPEMD160 y allowWeakHashForLegacyInterop:true permite crear', () => {
+    const dtf = DetachedTimestampFile.fromBytesWithHashOp(new OpRIPEMD160(), new Uint8Array(10), { allowWeakHashForLegacyInterop: true });
+    expect(dtf.fileHashOp).toBeInstanceOf(OpRIPEMD160);
+  });
+
+  it('deserializar un proof SHA-1 existente funciona (ruta legacy read)', () => {
+    const sha1Ts = new Timestamp(new Uint8Array(20).fill(0xaa));
+    sha1Ts.attestations.push(makePending('https://alice.btc.calendar.opentimestamps.org'));
+    const sha1Dtf = new DetachedTimestampFile(new OpSHA1(), sha1Ts);
+    const bytes = sha1Dtf.serializeToBytes();
+    const loaded = DetachedTimestampFile.deserialize(bytes);
+    expect(loaded.fileHashOp).toBeInstanceOf(OpSHA1);
+    expect(loaded.fileDigest()).toEqual(new Uint8Array(20).fill(0xaa));
+  });
+
+  it('fromBytes con OpSHA256 sigue funcionando (hash fuerte)', () => {
+    const dtf = DetachedTimestampFile.fromBytes(new OpSHA256(), new Uint8Array(32));
+    expect(dtf.fileHashOp).toBeInstanceOf(OpSHA256);
   });
 });
 

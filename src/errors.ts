@@ -96,3 +96,12 @@ export class EmptyMerkleTreeError extends Error {
 
 /** El fichero .ots declara una versión mayor no soportada. */
 export class UnsupportedVersionError extends DeserializationError {}
+
+/** Se intentó crear un timestamp nuevo con un algoritmo de hash débil (SHA-1, RIPEMD-160). */
+export class WeakHashError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}

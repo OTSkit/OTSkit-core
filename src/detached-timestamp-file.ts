@@ -1,8 +1,12 @@
 // src/detached-timestamp-file.ts
 import { StreamDeserializationContext, StreamSerializationContext } from './context.js';
-import { Op, CryptOp } from './ops.js';
+import { Op, CryptOp, OpSHA1, OpRIPEMD160 } from './ops.js';
 import { Timestamp } from './timestamp.js';
-import { DeserializationError, UnsupportedVersionError } from './errors.js';
+import { DeserializationError, UnsupportedVersionError, WeakHashError } from './errors.js';
+
+function isWeakHashOp(op: CryptOp): boolean {
+  return op instanceof OpSHA1 || op instanceof OpRIPEMD160;
+}
 
 /**
  * Cabecera mágica del formato .ots (31 bytes). Legible en un hexdump y reconocida como
@@ -85,10 +89,36 @@ export class DetachedTimestampFile {
     return new DetachedTimestampFile(op, timestamp);
   }
 
-  /** Crea un `.ots` nuevo hasheando el contenido completo de un fichero. */
+  /** Crea un `.ots` nuevo hasheando el contenido completo de un fichero. Solo SHA-256. */
   static fromBytes(fileHashOp: CryptOp, fileContent: Uint8Array): DetachedTimestampFile {
     if (!(fileHashOp instanceof CryptOp)) {
       throw new TypeError('DetachedTimestampFile.fromBytes: fileHashOp must be a CryptOp');
+    }
+    if (isWeakHashOp(fileHashOp)) {
+      throw new WeakHashError(
+        `DetachedTimestampFile.fromBytes: ${fileHashOp.tagName} is not allowed for new timestamps; use fromBytesWithHashOp with allowWeakHashForLegacyInterop:true for legacy interop`,
+      );
+    }
+    const digest = fileHashOp.hashFile(fileContent);
+    return new DetachedTimestampFile(fileHashOp, new Timestamp(digest));
+  }
+
+  /**
+   * Crea un `.ots` nuevo hasheando el fichero con cualquier op, incluyendo hashes débiles.
+   * Requiere `{ allowWeakHashForLegacyInterop: true }` explícito para SHA-1 o RIPEMD-160.
+   */
+  static fromBytesWithHashOp(
+    fileHashOp: CryptOp,
+    fileContent: Uint8Array,
+    options?: { allowWeakHashForLegacyInterop?: boolean },
+  ): DetachedTimestampFile {
+    if (!(fileHashOp instanceof CryptOp)) {
+      throw new TypeError('DetachedTimestampFile.fromBytesWithHashOp: fileHashOp must be a CryptOp');
+    }
+    if (isWeakHashOp(fileHashOp) && !options?.allowWeakHashForLegacyInterop) {
+      throw new WeakHashError(
+        `DetachedTimestampFile.fromBytesWithHashOp: ${fileHashOp.tagName} is not allowed; set allowWeakHashForLegacyInterop:true for legacy interop`,
+      );
     }
     const digest = fileHashOp.hashFile(fileContent);
     return new DetachedTimestampFile(fileHashOp, new Timestamp(digest));
