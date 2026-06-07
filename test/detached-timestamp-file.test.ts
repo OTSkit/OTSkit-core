@@ -36,7 +36,7 @@ const CANONICAL_OTS_HEX =
 
 const canonicalDtf = (): DetachedTimestampFile => {
   const ts = new Timestamp(new Uint8Array(32).fill(0xaa));
-  ts.attestations.push(makePending(URI));
+  ts.addAttestation(makePending(URI));
   return new DetachedTimestampFile(new OpSHA256(), ts);
 };
 
@@ -190,7 +190,7 @@ describe('DetachedTimestampFile — bloqueo SHA-1/RIPEMD-160 en creación (M3)',
 
   it('deserializar un proof SHA-1 existente funciona (ruta legacy read)', () => {
     const sha1Ts = new Timestamp(new Uint8Array(20).fill(0xaa));
-    sha1Ts.attestations.push(makePending('https://alice.btc.calendar.opentimestamps.org'));
+    sha1Ts.addAttestation(makePending('https://alice.btc.calendar.opentimestamps.org'));
     const sha1Dtf = new DetachedTimestampFile(new OpSHA1(), sha1Ts);
     const bytes = sha1Dtf.serializeToBytes();
     const loaded = DetachedTimestampFile.deserialize(bytes);
@@ -208,7 +208,7 @@ describe('DetachedTimestampFile — equals', () => {
   it('ficheros iguales → true', () => {
     const mk = () => {
       const t = new Timestamp(new Uint8Array(32).fill(0x07));
-      t.attestations.push(makeBitcoin(1));
+      t.addAttestation(makeBitcoin(1));
       return new DetachedTimestampFile(new OpSHA256(), t);
     };
     expect(mk().equals(mk())).toBe(true);
@@ -217,7 +217,7 @@ describe('DetachedTimestampFile — equals', () => {
   it('distinto fileHashOp → false (SHA1 vs RIPEMD160, ambos digest 20)', () => {
     const mk = (op: OpSHA1 | OpRIPEMD160) => {
       const t = new Timestamp(new Uint8Array(20));
-      t.attestations.push(makePending('https://a.org'));
+      t.addAttestation(makePending('https://a.org'));
       return new DetachedTimestampFile(op, t);
     };
     expect(mk(new OpSHA1()).equals(mk(new OpRIPEMD160()))).toBe(false);

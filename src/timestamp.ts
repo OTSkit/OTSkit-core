@@ -44,8 +44,7 @@ function opKey(op: Op): string {
 export class Timestamp {
   /** Digest de este nodo (copia defensiva, no comparte memoria con la entrada). */
   readonly msg: Uint8Array;
-  /** Sellos directos sobre `msg`. El cliente puede añadir con `.push()`. */
-  readonly attestations: Attestation[] = [];
+  #attestations: Attestation[] = [];
   /** Ramas indexadas por la serialización canónica (hex) de su op. */
   readonly #ops = new Map<string, Branch>();
 
@@ -57,6 +56,23 @@ export class Timestamp {
       throw new TypeError(`Timestamp msg length ${msg.length} exceeds ${Op.MAX_MSG_LENGTH}`);
     }
     this.msg = msg.slice();
+  }
+
+  /** Sellos directos sobre `msg`. Array de solo lectura; usar `addAttestation()` para añadir. */
+  get attestations(): ReadonlyArray<Attestation> {
+    return Object.freeze(this.#attestations.slice());
+  }
+
+  /** Añade una attestation validando que su `kind` es uno de los tipos conocidos. */
+  addAttestation(att: Attestation): void {
+    if (att == null || typeof att !== 'object') {
+      throw new TypeError('addAttestation requires a valid Attestation object');
+    }
+    const kind = (att as { kind?: unknown }).kind;
+    if (kind !== 'pending' && kind !== 'bitcoin' && kind !== 'litecoin' && kind !== 'unknown') {
+      throw new TypeError(`addAttestation: unknown kind '${String(kind)}'`);
+    }
+    this.#attestations.push(att);
   }
 
   /** El digest de este nodo (copia: mutar el resultado no afecta al árbol). */
@@ -94,7 +110,7 @@ export class Timestamp {
 
   #deserializeElement(ctx: StreamDeserializationContext, tag: number, depth: number): void {
     if (tag === 0x00) {
-      this.attestations.push(deserializeAttestation(ctx));
+      this.#attestations.push(deserializeAttestation(ctx));
       return;
     }
     const op = Op.deserializeFromTag(ctx, tag);
@@ -112,7 +128,7 @@ export class Timestamp {
 
   /** Serializa este nodo en orden canónico (determinista byte-a-byte). */
   serialize(ctx: StreamSerializationContext): void {
-    const attestations = [...this.attestations].sort(compareAttestations);
+    const attestations = [...this.#attestations].sort(compareAttestations);
     const branches = [...this.#ops.values()].sort((a, b) =>
       compareBytes(opToBytes(a.op), opToBytes(b.op)),
     );
@@ -176,9 +192,9 @@ export class Timestamp {
     if (!bytesEqual(this.msg, other.msg)) {
       throw new MergeError('cannot merge timestamps for different messages');
     }
-    for (const attestation of other.attestations) {
-      if (!this.attestations.some((existing) => attestationsEqual(existing, attestation))) {
-        this.attestations.push(attestation);
+    for (const attestation of other.#attestations) {
+      if (!this.#attestations.some((existing) => attestationsEqual(existing, attestation))) {
+        this.#attestations.push(attestation);
       }
     }
     for (const { op, stamp } of other.#ops.values()) {
@@ -195,7 +211,7 @@ export class Timestamp {
   /** Todas las attestations del árbol con el msg de su nodo (sin pérdida de datos). */
   allAttestations(): Array<{ msg: Uint8Array; attestation: Attestation }> {
     const result: Array<{ msg: Uint8Array; attestation: Attestation }> = [];
-    for (const attestation of this.attestations) {
+    for (const attestation of this.#attestations) {
       result.push({ msg: this.msg.slice(), attestation });
     }
     for (const { stamp } of this.#ops.values()) {
@@ -248,11 +264,11 @@ export class Timestamp {
     if (!bytesEqual(this.msg, other.msg)) {
       return false;
     }
-    if (this.attestations.length !== other.attestations.length) {
+    if (this.#attestations.length !== other.#attestations.length) {
       return false;
     }
-    const ours = [...this.attestations].sort(compareAttestations);
-    const theirs = [...other.attestations].sort(compareAttestations);
+    const ours = [...this.#attestations].sort(compareAttestations);
+    const theirs = [...other.#attestations].sort(compareAttestations);
     for (let i = 0; i < ours.length; i++) {
       if (!attestationsEqual(ours[i]!, theirs[i]!)) {
         return false;

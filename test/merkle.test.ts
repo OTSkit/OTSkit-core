@@ -38,7 +38,7 @@ describe('catSha256', () => {
     const left = new Timestamp(new Uint8Array([0x01]));
     const right = new Timestamp(new Uint8Array([0x02]));
     const tip = catSha256(left, right);
-    tip.attestations.push(makeBitcoin(5));
+    tip.addAttestation(makeBitcoin(5));
     expect(left.isTimestampComplete()).toBe(true);
     expect(right.isTimestampComplete()).toBe(true);
   });
@@ -103,7 +103,7 @@ describe('makeMerkleTree', () => {
   it('una attestation en la raíz completa TODAS las hojas (5 hojas, caso impar)', () => {
     const leaves = [0x01, 0x02, 0x03, 0x04, 0x05].map((b) => new Timestamp(new Uint8Array([b])));
     const root = makeMerkleTree(leaves);
-    root.attestations.push(makeBitcoin(42));
+    root.addAttestation(makeBitcoin(42));
     for (const leaf of leaves) {
       expect(leaf.isTimestampComplete()).toBe(true);
     }

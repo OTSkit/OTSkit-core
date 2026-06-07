@@ -4,6 +4,7 @@ import { Timestamp } from '../src/timestamp.js';
 import { Op, OpSHA256, OpSHA1, OpAppend, OpPrepend, OpReverse } from '../src/ops.js';
 import { StreamDeserializationContext, StreamSerializationContext } from '../src/context.js';
 import { makePending, makeBitcoin, makeLitecoin, makeUnknown, serializeAttestation } from '../src/notary.js';
+import type { Attestation } from '../src/notary.js';
 import {
   TruncatedStreamError,
   OversizedDataError,
@@ -30,6 +31,29 @@ const pendingBytes = (uri: string): number[] => {
   serializeAttestation(sc, makePending(uri));
   return Array.from(sc.getOutput());
 };
+
+// ─── L2: addAttestation / attestations inmutables ────────────────────────────
+
+describe('Timestamp — addAttestation / attestations inmutables (L2)', () => {
+  it('addAttestation añade una attestation válida y es visible por el getter', () => {
+    const ts = new Timestamp(new Uint8Array(32));
+    ts.addAttestation(makeBitcoin(100));
+    expect(ts.attestations.length).toBe(1);
+    expect(ts.attestations[0]?.kind).toBe('bitcoin');
+  });
+
+  it('addAttestation con objeto vacío lanza TypeError', () => {
+    // @ts-expect-error invalid attestation deliberada
+    expect(() => new Timestamp(new Uint8Array(32)).addAttestation({})).toThrow(TypeError);
+  });
+
+  it('attestations no muta: push() sobre el getter lanza TypeError en runtime', () => {
+    const ts = new Timestamp(new Uint8Array(32));
+    ts.addAttestation(makeBitcoin(1));
+    expect(() => (ts.attestations as Attestation[]).push(makeBitcoin(2))).toThrow(TypeError);
+    expect(ts.attestations.length).toBe(1);
+  });
+});
 
 // ─── Task 3: constructor ───────────────────────────────────────────────────────
 
@@ -80,7 +104,7 @@ describe('Timestamp — serialize / deserialize', () => {
 
   it('round-trip: una sola attestation', () => {
     const ts = new Timestamp(MSG32);
-    ts.attestations.push(makeBitcoin(123));
+    ts.addAttestation(makeBitcoin(123));
     const back = Timestamp.deserialize(de(new Uint8Array(reserialize(ts))), MSG32);
     expect(reserialize(back)).toEqual(reserialize(ts));
   });
@@ -88,16 +112,16 @@ describe('Timestamp — serialize / deserialize', () => {
   it('round-trip: una sola rama (op) con attestation en la hoja', () => {
     const ts = new Timestamp(MSG32);
     const sub = ts.add(new OpSHA256());
-    sub.attestations.push(makePending('https://a.pool.opentimestamps.org'));
+    sub.addAttestation(makePending('https://a.pool.opentimestamps.org'));
     const back = Timestamp.deserialize(de(new Uint8Array(reserialize(ts))), MSG32);
     expect(reserialize(back)).toEqual(reserialize(ts));
   });
 
   it('round-trip: múltiples ramas (fork con 0xff) + attestation en el nodo', () => {
     const ts = new Timestamp(MSG32);
-    ts.attestations.push(makeBitcoin(1));
-    ts.add(new OpReverse()).attestations.push(makeBitcoin(2));
-    ts.add(new OpSHA256()).attestations.push(makeBitcoin(3));
+    ts.addAttestation(makeBitcoin(1));
+    ts.add(new OpReverse()).addAttestation(makeBitcoin(2));
+    ts.add(new OpSHA256()).addAttestation(makeBitcoin(3));
     const back = Timestamp.deserialize(de(new Uint8Array(reserialize(ts))), MSG32);
     expect(reserialize(back)).toEqual(reserialize(ts));
   });
@@ -105,8 +129,8 @@ describe('Timestamp — serialize / deserialize', () => {
   it('orden canónico: el orden de inserción de las ops no cambia los bytes (B3)', () => {
     const build = (order: 'ab' | 'ba'): Timestamp => {
       const t = new Timestamp(MSG32);
-      const addRev = () => t.add(new OpReverse()).attestations.push(makeBitcoin(1));
-      const addSha = () => t.add(new OpSHA256()).attestations.push(makeBitcoin(2));
+      const addRev = () => t.add(new OpReverse()).addAttestation(makeBitcoin(1));
+      const addSha = () => t.add(new OpSHA256()).addAttestation(makeBitcoin(2));
       if (order === 'ab') {
         addRev();
         addSha();
@@ -123,11 +147,11 @@ describe('Timestamp — serialize / deserialize', () => {
     const build = (order: 'ab' | 'ba'): Timestamp => {
       const t = new Timestamp(MSG32);
       if (order === 'ab') {
-        t.attestations.push(makeBitcoin(1));
-        t.attestations.push(makeBitcoin(2));
+        t.addAttestation(makeBitcoin(1));
+        t.addAttestation(makeBitcoin(2));
       } else {
-        t.attestations.push(makeBitcoin(2));
-        t.attestations.push(makeBitcoin(1));
+        t.addAttestation(makeBitcoin(2));
+        t.addAttestation(makeBitcoin(1));
       }
       return t;
     };
@@ -179,10 +203,10 @@ describe('Timestamp — merge / add', () => {
   it('merge añade las attestations del otro sin duplicar', () => {
     const m = new Uint8Array([9, 9]);
     const a = new Timestamp(m);
-    a.attestations.push(makeBitcoin(1));
+    a.addAttestation(makeBitcoin(1));
     const b = new Timestamp(m);
-    b.attestations.push(makeBitcoin(1)); // duplicada → no se añade
-    b.attestations.push(makeBitcoin(2)); // nueva → se añade
+    b.addAttestation(makeBitcoin(1)); // duplicada → no se añade
+    b.addAttestation(makeBitcoin(2)); // nueva → se añade
     a.merge(b);
     expect(a.attestations.length).toBe(2);
   });
@@ -190,9 +214,9 @@ describe('Timestamp — merge / add', () => {
   it('merge fusiona ops equivalentes con objetos distintos (B5)', () => {
     const m = new Uint8Array([1, 2, 3, 4]);
     const a = new Timestamp(m);
-    a.add(new OpSHA256()).attestations.push(makeBitcoin(1));
+    a.add(new OpSHA256()).addAttestation(makeBitcoin(1));
     const b = new Timestamp(m);
-    b.add(new OpSHA256()).attestations.push(makeBitcoin(2));
+    b.add(new OpSHA256()).addAttestation(makeBitcoin(2));
     a.merge(b);
     expect(a.branches.length).toBe(1); // una sola rama, no dos
     expect(a.branches[0]!.stamp.attestations.length).toBe(2);
@@ -202,7 +226,7 @@ describe('Timestamp — merge / add', () => {
     const m = new Uint8Array([1, 2, 3, 4]);
     const a = new Timestamp(m);
     const b = new Timestamp(m);
-    b.add(new OpSHA256()).attestations.push(makeBitcoin(7));
+    b.add(new OpSHA256()).addAttestation(makeBitcoin(7));
     a.merge(b);
     expect(a.branches.length).toBe(1);
     expect(a.branches[0]!.stamp.attestations[0]).toEqual(makeBitcoin(7));
@@ -233,14 +257,14 @@ describe('Timestamp — merge / add', () => {
 describe('Timestamp — recorridos', () => {
   it('allAttestations conserva varias attestations del mismo nodo (B2)', () => {
     const t = new Timestamp(new Uint8Array([1]));
-    t.attestations.push(makeBitcoin(1));
-    t.attestations.push(makePending('https://a.org'));
+    t.addAttestation(makeBitcoin(1));
+    t.addAttestation(makePending('https://a.org'));
     expect(t.allAttestations().length).toBe(2);
   });
 
   it('allAttestations recorre los sub-árboles', () => {
     const t = new Timestamp(MSG32);
-    t.add(new OpSHA256()).attestations.push(makeBitcoin(9));
+    t.add(new OpSHA256()).addAttestation(makeBitcoin(9));
     const entries = t.allAttestations();
     expect(entries.length).toBe(1);
     expect(entries[0]!.attestation.kind).toBe('bitcoin');
@@ -249,40 +273,40 @@ describe('Timestamp — recorridos', () => {
 
   it('getAttestations devuelve todas las attestations del árbol', () => {
     const t = new Timestamp(new Uint8Array([1]));
-    t.attestations.push(makeBitcoin(1));
-    t.attestations.push(makeBitcoin(2));
+    t.addAttestation(makeBitcoin(1));
+    t.addAttestation(makeBitcoin(2));
     expect(t.getAttestations().length).toBe(2);
   });
 
   it('isTimestampComplete: solo Bitcoin/Litecoin → true (S3)', () => {
     const withAtt = (att: ReturnType<typeof makeBitcoin>) => {
       const t = new Timestamp(new Uint8Array([1]));
-      t.attestations.push(att);
+      t.addAttestation(att);
       return t;
     };
     expect(withAtt(makeBitcoin(1)).isTimestampComplete()).toBe(true);
     expect(withAtt(makeLitecoin(1)).isTimestampComplete()).toBe(true);
 
     const pending = new Timestamp(new Uint8Array([1]));
-    pending.attestations.push(makePending('https://a.org'));
+    pending.addAttestation(makePending('https://a.org'));
     expect(pending.isTimestampComplete()).toBe(false);
 
     const unknown = new Timestamp(new Uint8Array([1]));
-    unknown.attestations.push(makeUnknown(new Uint8Array(8), new Uint8Array(0)));
+    unknown.addAttestation(makeUnknown(new Uint8Array(8), new Uint8Array(0)));
     expect(unknown.isTimestampComplete()).toBe(false);
   });
 
   it('directlyVerified devuelve los nodos que tienen attestations', () => {
     const t = new Timestamp(MSG32);
     const sub = t.add(new OpSHA256());
-    sub.attestations.push(makeBitcoin(1));
+    sub.addAttestation(makeBitcoin(1));
     const dv = t.directlyVerified();
     expect(dv).toEqual([sub]);
   });
 
   it('directlyVerified: un nodo con attestation se devuelve a sí mismo', () => {
     const t = new Timestamp(new Uint8Array([1]));
-    t.attestations.push(makeBitcoin(1));
+    t.addAttestation(makeBitcoin(1));
     expect(t.directlyVerified()).toEqual([t]);
   });
 
@@ -305,7 +329,7 @@ describe('Timestamp — recorridos', () => {
 describe('Timestamp — equals', () => {
   const buildSha = (height: number): Timestamp => {
     const t = new Timestamp(new Uint8Array([1, 2, 3, 4]));
-    t.add(new OpSHA256()).attestations.push(makeBitcoin(height));
+    t.add(new OpSHA256()).addAttestation(makeBitcoin(height));
     return t;
   };
 
@@ -316,9 +340,9 @@ describe('Timestamp — equals', () => {
   it('ops distintas con el mismo tamaño → false (B1)', () => {
     const m = new Uint8Array([1, 2, 3, 4]);
     const a = new Timestamp(m);
-    a.add(new OpSHA256()).attestations.push(makeBitcoin(1));
+    a.add(new OpSHA256()).addAttestation(makeBitcoin(1));
     const b = new Timestamp(m);
-    b.add(new OpSHA1()).attestations.push(makeBitcoin(1));
+    b.add(new OpSHA1()).addAttestation(makeBitcoin(1));
     expect(a.equals(b)).toBe(false);
   });
 
@@ -332,15 +356,15 @@ describe('Timestamp — equals', () => {
 
   it('distinto número de attestations → false', () => {
     const a = new Timestamp(new Uint8Array([1]));
-    a.attestations.push(makeBitcoin(1));
+    a.addAttestation(makeBitcoin(1));
     expect(a.equals(new Timestamp(new Uint8Array([1])))).toBe(false);
   });
 
   it('attestations distintas → false', () => {
     const a = new Timestamp(new Uint8Array([1]));
-    a.attestations.push(makeBitcoin(1));
+    a.addAttestation(makeBitcoin(1));
     const b = new Timestamp(new Uint8Array([1]));
-    b.attestations.push(makeBitcoin(2));
+    b.addAttestation(makeBitcoin(2));
     expect(a.equals(b)).toBe(false);
   });
 
@@ -371,7 +395,7 @@ describe('Timestamp — addExisting (cross-link Merkle)', () => {
     expect(left.branches.length).toBe(1);
     expect(left.branches[0]!.stamp).toBe(concat);
     // una attestation en concat es visible desde ambas hojas
-    concat.attestations.push(makeBitcoin(1));
+    concat.addAttestation(makeBitcoin(1));
     expect(left.getAttestations().length).toBe(1);
     expect(right.getAttestations().length).toBe(1);
   });
