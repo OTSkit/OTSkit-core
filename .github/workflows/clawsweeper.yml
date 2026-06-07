@@ -17,15 +17,17 @@ jobs:
     steps:
       - name: Create dispatch token
         id: token
+        continue-on-error: true
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         with:
-          client-id: ${{ secrets.CLAWSWEEPER_APP_CLIENT_ID }}
+          client-id: "Iv23liyiXRX8T7AX312w"
           private-key: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
           owner: OTSkit
           repositories: clawsweeper
           permission-actions: write
 
       - name: Dispatch clawsweeper_item event
+        if: steps.token.outputs.token != ''
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           ITEM_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
