@@ -1,0 +1,43 @@
+name: Notify ClawSweeper
+
+on:
+  issues:
+    types: [opened, reopened, edited]
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Dispatch to ClawSweeper
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Create dispatch token
+        id: token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          client-id: ${{ secrets.CLAWSWEEPER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
+          owner: OTSkit
+          repositories: clawsweeper
+          permission-actions: write
+
+      - name: Dispatch clawsweeper_item event
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          ITEM_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          ITEM_KIND: ${{ github.event_name == 'issues' && 'issue' || 'pull_request' }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/OTSkit/clawsweeper/dispatches \
+            -f event_type="clawsweeper_item" \
+            -F client_payload[target_repo]="OTSkit/otskit-core" \
+            -F client_payload[target_branch]="main" \
+            -F client_payload[item_number]="$ITEM_NUMBER" \
+            -F client_payload[item_kind]="$ITEM_KIND" \
+            -F client_payload[hot_intake]="true"
