@@ -1,3 +1,10 @@
+## [0.1.4](https://github.com/OTSkit/OTSkit-core/compare/v0.1.3...v0.1.4) (2026-06-05)
+
+
+### Bug Fixes
+
+* add repository and homepage fields to package.json ([97a5761](https://github.com/OTSkit/OTSkit-core/commit/97a57613eb218f577d908195d6ad126c49c03461))
+
 ## [0.1.3](https://github.com/OTSkit/OTSkit-core/compare/v0.1.2...v0.1.3) (2026-06-05)
 
 
