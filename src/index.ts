@@ -35,6 +35,8 @@ export {
   verifyAgainstBlockheader,
   verifyAgainstRawHeader,
   verifyBitcoinAttestation,
+  parseCalendarUri,
+  CALENDAR_ALLOWLIST,
 } from './notary.js';
 export type { Branch, BlockHeaderProvider } from './timestamp.js';
 export { Timestamp } from './timestamp.js';

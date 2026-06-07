@@ -9,6 +9,8 @@ import {
   verifyAgainstBlockheader,
   verifyAgainstRawHeader,
   verifyBitcoinAttestation,
+  parseCalendarUri,
+  CALENDAR_ALLOWLIST,
 } from '../src/notary.js';
 import { StreamDeserializationContext, StreamSerializationContext } from '../src/context.js';
 import { TruncatedStreamError, OversizedDataError, TrailingGarbageError } from '../src/errors.js';
@@ -366,5 +368,62 @@ describe('verifyBitcoinAttestation (M1)', () => {
     expect(
       verifyBitcoinAttestation(genesisMerkleRootInternal, att, genesisRawHeader, 0),
     ).toBe(GENESIS_TIME);
+  });
+});
+
+// ─── L1: parseCalendarUri — anti-SSRF ─────────────────────────────────────────
+
+describe('parseCalendarUri (L1 — anti-SSRF)', () => {
+  it('http:// (no HTTPS) → InvalidUriError — bloquea loopback y IPs internas', () => {
+    expect(() => parseCalendarUri('http://127.0.0.1/calendar')).toThrow(InvalidUriError);
+    expect(() => parseCalendarUri('http://a.pool.opentimestamps.org')).toThrow(InvalidUriError);
+  });
+
+  it('credenciales en URI → InvalidUriError', () => {
+    expect(() =>
+      parseCalendarUri('https://user:pass@a.pool.opentimestamps.org'),
+    ).toThrow(InvalidUriError);
+  });
+
+  it('host fuera de la allowlist → InvalidUriError', () => {
+    expect(() => parseCalendarUri('https://evil.example.com/calendar')).toThrow(InvalidUriError);
+    expect(() => parseCalendarUri('https://a.pool.opentimestamps.org.evil.com')).toThrow(InvalidUriError);
+  });
+
+  it('query string → InvalidUriError', () => {
+    expect(() =>
+      parseCalendarUri('https://a.pool.opentimestamps.org?foo=bar'),
+    ).toThrow(InvalidUriError);
+  });
+
+  it('fragment → InvalidUriError', () => {
+    expect(() =>
+      parseCalendarUri('https://a.pool.opentimestamps.org#section'),
+    ).toThrow(InvalidUriError);
+  });
+
+  it('cadena no parseable como URL → InvalidUriError', () => {
+    expect(() => parseCalendarUri('not-a-url')).toThrow(InvalidUriError);
+    expect(() => parseCalendarUri('')).toThrow(InvalidUriError);
+  });
+
+  it.each([
+    'https://a.pool.opentimestamps.org',
+    'https://b.pool.opentimestamps.org',
+    'https://a.eternitywall.com',
+    'https://btc.calendar.catallaxy.com',
+  ])('URI bien formada en allowlist pasa (%s)', (uri) => {
+    expect(() => parseCalendarUri(uri)).not.toThrow();
+  });
+
+  it('allowlist personalizada acepta host custom', () => {
+    expect(() =>
+      parseCalendarUri('https://my.custom.calendar.example.com', [/\.example\.com$/i]),
+    ).not.toThrow();
+  });
+
+  it('CALENDAR_ALLOWLIST es el array exportado por defecto', () => {
+    expect(Array.isArray(CALENDAR_ALLOWLIST)).toBe(true);
+    expect(CALENDAR_ALLOWLIST.length).toBeGreaterThan(0);
   });
 });

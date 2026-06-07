@@ -11,6 +11,52 @@ const ALLOWED_URI_CHARS = new Set(
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._/:',
 );
 
+/**
+ * Dominios de calendarios OpenTimestamps conocidos. El consumidor (@otskit/client) debe
+ * también resolver DNS y rechazar rangos privados/loopback/link-local antes de fetchear.
+ */
+export const CALENDAR_ALLOWLIST: ReadonlyArray<RegExp> = [
+  /\.opentimestamps\.org$/i,
+  /\.eternitywall\.com$/i,
+  /\.catallaxy\.com$/i,
+];
+
+/**
+ * Valida una URI de calendario antes de usarla en una petición de red.
+ * Exige HTTPS, sin credenciales, sin query string ni fragment, y que el host coincida
+ * con la allowlist (por defecto `CALENDAR_ALLOWLIST`).
+ * @throws InvalidUriError ante cualquier incumplimiento
+ */
+export function parseCalendarUri(
+  uri: string,
+  allowedHosts: ReadonlyArray<RegExp> = CALENDAR_ALLOWLIST,
+): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(uri);
+  } catch {
+    throw new InvalidUriError(`calendar URI is not a valid URL: ${uri}`);
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new InvalidUriError(`calendar URI must use HTTPS; got '${parsed.protocol}'`);
+  }
+  if (parsed.username || parsed.password) {
+    throw new InvalidUriError('calendar URI must not contain credentials');
+  }
+  if (parsed.search) {
+    throw new InvalidUriError('calendar URI must not contain a query string');
+  }
+  if (parsed.hash) {
+    throw new InvalidUriError('calendar URI must not contain a fragment');
+  }
+  if (!allowedHosts.some((re) => re.test(parsed.hostname))) {
+    throw new InvalidUriError(
+      `calendar URI host '${parsed.hostname}' is not in the allowed calendar list`,
+    );
+  }
+  return parsed.href;
+}
+
 const PENDING_TAG = new Uint8Array([0x83, 0xdf, 0xe3, 0x0d, 0x2e, 0xf9, 0x0c, 0x8e]);
 const BITCOIN_TAG = new Uint8Array([0x05, 0x88, 0x96, 0x0d, 0x73, 0xd7, 0x19, 0x01]);
 const LITECOIN_TAG = new Uint8Array([0x06, 0x86, 0x9a, 0x0d, 0x73, 0xd7, 0x1b, 0x45]);
