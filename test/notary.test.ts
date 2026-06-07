@@ -8,6 +8,7 @@ import {
   compareAttestations, attestationsEqual,
   verifyAgainstBlockheader,
   verifyAgainstRawHeader,
+  verifyBitcoinAttestation,
 } from '../src/notary.js';
 import { StreamDeserializationContext, StreamSerializationContext } from '../src/context.js';
 import { TruncatedStreamError, OversizedDataError, TrailingGarbageError } from '../src/errors.js';
@@ -341,5 +342,29 @@ describe('verifyAgainstBlockheader', () => {
   it('digest no coincide con merkleroot → VerificationError', () => {
     const other = hexToBytes('b'.repeat(64));
     expect(() => verifyAgainstBlockheader(other, { merkleroot: ROOT, time: 1 })).toThrow(VerificationError);
+  });
+});
+
+// ─── M1: verifyBitcoinAttestation — vincular altura al header ─────────────────
+
+describe('verifyBitcoinAttestation (M1)', () => {
+  const genesisRawHeader = hexToBytes(GENESIS_RAW_HEADER_HEX);
+  const genesisMerkleRootInternal = hexToBytes(
+    '3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a',
+  );
+  const GENESIS_TIME = 1231006505;
+
+  it('headerHeight distinto de attestation.height → lanza VerificationError', () => {
+    const att = makeBitcoin(500);
+    expect(() =>
+      verifyBitcoinAttestation(genesisMerkleRootInternal, att, genesisRawHeader, 501),
+    ).toThrow(VerificationError);
+  });
+
+  it('headerHeight igual a attestation.height y digest correcto → devuelve block.time', () => {
+    const att = makeBitcoin(0);
+    expect(
+      verifyBitcoinAttestation(genesisMerkleRootInternal, att, genesisRawHeader, 0),
+    ).toBe(GENESIS_TIME);
   });
 });

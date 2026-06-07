@@ -34,6 +34,7 @@ export {
   attestationsEqual,
   verifyAgainstBlockheader,
   verifyAgainstRawHeader,
+  verifyBitcoinAttestation,
 } from './notary.js';
 export type { Branch } from './timestamp.js';
 export { Timestamp } from './timestamp.js';

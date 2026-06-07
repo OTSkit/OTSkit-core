@@ -242,6 +242,25 @@ export function verifyAgainstRawHeader(digest: Uint8Array, rawHeader: Uint8Array
 }
 
 /**
+ * Verifica un digest contra una cabecera de bloque cruda, exigiendo además que la altura
+ * del header coincida con la de la attestation. Previene el backdating attack donde se
+ * verifica contra un bloque distinto al que declara la attestation.
+ */
+export function verifyBitcoinAttestation(
+  digest: Uint8Array,
+  attestation: BitcoinAttestation,
+  rawHeader: Uint8Array,
+  headerHeight: number,
+): number {
+  if (headerHeight !== attestation.height) {
+    throw new VerificationError(
+      `header height ${headerHeight} does not match attestation height ${attestation.height}`,
+    );
+  }
+  return verifyAgainstRawHeader(digest, rawHeader);
+}
+
+/**
  * Verifica un digest de 32 bytes contra el merkleroot de una cabecera de bloque.
  * Devuelve `block.time` en éxito; lanza `VerificationError` ante cualquier discrepancia.
  */
