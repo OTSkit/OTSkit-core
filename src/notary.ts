@@ -198,6 +198,12 @@ export function attestationsEqual(a: Attestation, b: Attestation): boolean {
   }
 }
 
+const BLOCK_HEADER_SIZE = 80;
+const MERKLEROOT_OFFSET = 36;
+const MERKLEROOT_SIZE = 32;
+const TIME_OFFSET = 68;
+const TIME_SIZE = 4;
+
 const MERKLEROOT_RE = /^[0-9a-fA-F]{64}$/;
 
 /** Cabecera de bloque mínima necesaria para verificar una atestación. */
@@ -206,6 +212,33 @@ export interface BlockHeader {
   readonly merkleroot: string;
   /** Marca de tiempo del bloque (entero positivo). */
   readonly time: number;
+}
+
+/**
+ * Verifica un digest de 32 bytes contra el merkle root de una cabecera de bloque cruda (80 bytes).
+ * El merkle root se extrae de los bytes 36..68 en byte order INTERNO de Bitcoin (el mismo que
+ * usa el protocolo OTS internamente), que es el INVERSO del orden de display de las APIs Bitcoin
+ * (block explorers, `getblock` RPC). Devuelve el timestamp del bloque en éxito.
+ */
+export function verifyAgainstRawHeader(digest: Uint8Array, rawHeader: Uint8Array): number {
+  if (digest.length !== MERKLEROOT_SIZE) {
+    throw new VerificationError(`expected digest of ${MERKLEROOT_SIZE} bytes; got ${digest.length}`);
+  }
+  if (!(rawHeader instanceof Uint8Array) || rawHeader.length !== BLOCK_HEADER_SIZE) {
+    throw new VerificationError(
+      `expected raw block header of ${BLOCK_HEADER_SIZE} bytes; got ${rawHeader instanceof Uint8Array ? rawHeader.length : 'non-Uint8Array'}`,
+    );
+  }
+  const merkleRootInternal = rawHeader.subarray(MERKLEROOT_OFFSET, MERKLEROOT_OFFSET + MERKLEROOT_SIZE);
+  if (!bytesEqual(digest, merkleRootInternal)) {
+    throw new VerificationError('digest does not match block merkleroot (internal byte order)');
+  }
+  const t = rawHeader.subarray(TIME_OFFSET, TIME_OFFSET + TIME_SIZE);
+  const time = ((t[0]!) | (t[1]! << 8) | (t[2]! << 16) | (t[3]! << 24)) >>> 0;
+  if (time === 0) {
+    throw new VerificationError('block time is zero');
+  }
+  return time;
 }
 
 /**

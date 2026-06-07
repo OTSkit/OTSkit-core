@@ -33,6 +33,7 @@ export {
   compareAttestations,
   attestationsEqual,
   verifyAgainstBlockheader,
+  verifyAgainstRawHeader,
 } from './notary.js';
 export type { Branch } from './timestamp.js';
 export { Timestamp } from './timestamp.js';

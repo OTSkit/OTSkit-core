@@ -7,6 +7,7 @@ import {
   deserializeAttestation, serializeAttestation,
   compareAttestations, attestationsEqual,
   verifyAgainstBlockheader,
+  verifyAgainstRawHeader,
 } from '../src/notary.js';
 import { StreamDeserializationContext, StreamSerializationContext } from '../src/context.js';
 import { TruncatedStreamError, OversizedDataError, TrailingGarbageError } from '../src/errors.js';
@@ -260,6 +261,46 @@ describe('attestationsEqual', () => {
     const t1 = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
     const t2 = new Uint8Array([8, 7, 6, 5, 4, 3, 2, 1]);
     expect(attestationsEqual(makeUnknown(t1, new Uint8Array(0)), makeUnknown(t2, new Uint8Array(0)))).toBe(false);
+  });
+});
+
+// ─── M4: verifyAgainstRawHeader — endianness explícita ────────────────────────
+
+// Cabecera del bloque génesis de Bitcoin (80 bytes):
+//   versión:      01000000  (little-endian)
+//   prev_hash:    0000...0000  (32 bytes ceros)
+//   merkle_root:  3ba3edfd...e4a  (orden interno, 32 bytes)
+//   time:         29ab5f49  (LE) = 1231006505
+//   bits:         ffff001d
+//   nonce:        1dac2b7c
+const GENESIS_RAW_HEADER_HEX =
+  '01000000' +
+  '0000000000000000000000000000000000000000000000000000000000000000' +
+  '3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a' +
+  '29ab5f49' +
+  'ffff001d' +
+  '1dac2b7c';
+
+describe('verifyAgainstRawHeader (M4)', () => {
+  it('bloque génesis: verifica con merkle root en orden interno', () => {
+    const rawHeader = hexToBytes(GENESIS_RAW_HEADER_HEX);
+    const merkleRootInternal = hexToBytes('3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a');
+    expect(verifyAgainstRawHeader(merkleRootInternal, rawHeader)).toBe(1231006505);
+  });
+
+  it('falla con merkle root en orden de display (invertido) — detecta bug de endianness', () => {
+    const rawHeader = hexToBytes(GENESIS_RAW_HEADER_HEX);
+    // Orden de display = bytes invertidos respecto al orden interno
+    const merkleRootDisplay = hexToBytes('4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b');
+    expect(() => verifyAgainstRawHeader(merkleRootDisplay, rawHeader)).toThrow(VerificationError);
+  });
+
+  it('header de longitud distinta a 80 → VerificationError', () => {
+    expect(() => verifyAgainstRawHeader(new Uint8Array(32), new Uint8Array(79))).toThrow(VerificationError);
+  });
+
+  it('digest de longitud distinta a 32 → VerificationError', () => {
+    expect(() => verifyAgainstRawHeader(new Uint8Array(31), new Uint8Array(80))).toThrow(VerificationError);
   });
 });
 
