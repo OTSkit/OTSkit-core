@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import { StreamDeserializationContext, StreamSerializationContext } from '../src/context.js';
-import { TruncatedStreamError, OversizedDataError, VaruintOverflowError, BadMagicError, TrailingGarbageError } from '../src/errors.js';
+import { TruncatedStreamError, OversizedDataError, VaruintOverflowError, BadMagicError, TrailingGarbageError, NonCanonicalVaruintError } from '../src/errors.js';
 
 const ser = () => new StreamSerializationContext();
 const de = (b: Uint8Array) => new StreamDeserializationContext(b);
@@ -138,6 +138,28 @@ describe('StreamSerializationContext extras', () => {
     for (let i = 0; i < 4097; i++) s.writeByte(0xaa);
     expect(s.length).toBe(4097);
     expect(s.getOutput()[4096]).toBe(0xaa);
+  });
+});
+
+describe('readVaruint modo strict (L3)', () => {
+  it('encoding overlong 0x80 0x00 acepta en modo lenient (default)', () => {
+    expect(de(new Uint8Array([0x80, 0x00])).readVaruint()).toBe(0);
+  });
+
+  it('encoding overlong 0x80 0x00 lanza NonCanonicalVaruintError en modo strict', () => {
+    expect(() => de(new Uint8Array([0x80, 0x00])).readVaruint({ strict: true })).toThrow(NonCanonicalVaruintError);
+  });
+
+  it('encoding canónico de 0 (0x00) pasa el modo strict', () => {
+    expect(de(new Uint8Array([0x00])).readVaruint({ strict: true })).toBe(0);
+  });
+
+  it('encoding canónico de 128 (0x80 0x01) pasa el modo strict', () => {
+    expect(de(new Uint8Array([0x80, 0x01])).readVaruint({ strict: true })).toBe(128);
+  });
+
+  it('overlong triple 0x80 0x80 0x00 lanza NonCanonicalVaruintError en strict', () => {
+    expect(() => de(new Uint8Array([0x80, 0x80, 0x00])).readVaruint({ strict: true })).toThrow(NonCanonicalVaruintError);
   });
 });
 

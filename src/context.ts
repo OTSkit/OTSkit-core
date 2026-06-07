@@ -4,6 +4,7 @@ import {
   TruncatedStreamError,
   OversizedDataError,
   VaruintOverflowError,
+  NonCanonicalVaruintError,
   BadMagicError,
   TrailingGarbageError,
 } from './errors.js';
@@ -43,7 +44,8 @@ export class StreamDeserializationContext {
   }
 
   /** Varuint LEB128: 7 bits por byte, bit 7 = continuación. */
-  readVaruint(): number {
+  readVaruint(options?: { strict?: boolean }): number {
+    const startOffset = this.#counter;
     let value = 0;
     let shift = 0;
     let byte: number;
@@ -58,6 +60,14 @@ export class StreamDeserializationContext {
       }
       shift += 7;
     } while (byte & 0x80);
+    if (options?.strict) {
+      const bytesRead = this.#counter - startOffset;
+      const reenc = new StreamSerializationContext();
+      reenc.writeVaruint(value);
+      if (reenc.length !== bytesRead) {
+        throw new NonCanonicalVaruintError('varuint encoding is not minimal (overlong)');
+      }
+    }
     return value;
   }
 

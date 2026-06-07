@@ -21,6 +21,9 @@ export class OversizedDataError extends DeserializationError {}
 /** Un varuint LEB128 excede Number.MAX_SAFE_INTEGER. */
 export class VaruintOverflowError extends DeserializationError {}
 
+/** Un varuint LEB128 usa más bytes de los necesarios (encoding no canónico/overlong). */
+export class NonCanonicalVaruintError extends DeserializationError {}
+
 /** Quedan bytes tras terminar de deserializar lo esperado. */
 export class TrailingGarbageError extends DeserializationError {}
 
