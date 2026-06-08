@@ -427,3 +427,17 @@ describe('parseCalendarUri (L1 — anti-SSRF)', () => {
     expect(CALENDAR_ALLOWLIST.length).toBeGreaterThan(0);
   });
 });
+
+describe('verifyAgainstRawHeader — block time cero', () => {
+  it('lanza VerificationError si block time es cero (línea 285)', () => {
+    const rawHeader = new Uint8Array(80);
+    const digest = new Uint8Array(32);
+    expect(() => verifyAgainstRawHeader(digest, rawHeader)).toThrow(VerificationError);
+  });
+
+  it('lanza VerificationError si rawHeader no es Uint8Array (branch non-Uint8Array, línea 275)', () => {
+    const digest = new Uint8Array(32);
+    // @ts-expect-error argumento inválido deliberado
+    expect(() => verifyAgainstRawHeader(digest, 'not-a-uint8array')).toThrow(VerificationError);
+  });
+});

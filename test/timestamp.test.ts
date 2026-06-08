@@ -50,6 +50,11 @@ describe('Timestamp — addAttestation / attestations inmutables (L2)', () => {
     expect(() => new Timestamp(new Uint8Array(32)).addAttestation({})).toThrow(TypeError);
   });
 
+  it('addAttestation con null lanza TypeError (línea 78)', () => {
+    // @ts-expect-error null deliberado
+    expect(() => new Timestamp(new Uint8Array(32)).addAttestation(null)).toThrow(TypeError);
+  });
+
   it('attestations no muta: push() sobre el getter lanza TypeError en runtime', () => {
     const ts = new Timestamp(new Uint8Array(32));
     ts.addAttestation(makeBitcoin(1));

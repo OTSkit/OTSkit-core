@@ -177,6 +177,11 @@ describe('DetachedTimestampFile — bloqueo SHA-1/RIPEMD-160 en creación (M3)',
     expect(() => DetachedTimestampFile.fromBytesWithHashOp(new OpSHA1(), new Uint8Array(10))).toThrow(WeakHashError);
   });
 
+  it('fromBytesWithHashOp con no-CryptOp lanza TypeError (línea 116)', () => {
+    // @ts-expect-error argumento inválido deliberado
+    expect(() => DetachedTimestampFile.fromBytesWithHashOp({}, new Uint8Array(10))).toThrow(TypeError);
+  });
+
   it('fromBytesWithHashOp con OpSHA1 y allowWeakHashForLegacyInterop:true permite crear', () => {
     const dtf = DetachedTimestampFile.fromBytesWithHashOp(new OpSHA1(), new Uint8Array(10), { allowWeakHashForLegacyInterop: true });
     expect(dtf.fileHashOp).toBeInstanceOf(OpSHA1);
