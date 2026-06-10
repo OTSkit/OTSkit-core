@@ -2,6 +2,7 @@
 import { StreamDeserializationContext, StreamSerializationContext } from './context.js';
 import { InvalidUriError, VerificationError } from './errors.js';
 import { bytesEqual, compareBytes, textToBytes, hexToBytes } from './utils.js';
+import { CALENDAR_ALLOWLIST } from './calendars.js';
 
 const TAG_SIZE = 8;
 const MAX_PAYLOAD_SIZE = 8192;
@@ -11,15 +12,11 @@ const ALLOWED_URI_CHARS = new Set(
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._/:',
 );
 
-/**
- * Dominios de calendarios OpenTimestamps conocidos. El consumidor (@otskit/client) debe
- * también resolver DNS y rechazar rangos privados/loopback/link-local antes de fetchear.
- */
-export const CALENDAR_ALLOWLIST: ReadonlyArray<RegExp> = [
-  /\.opentimestamps\.org$/i,
-  /\.eternitywall\.com$/i,
-  /\.catallaxy\.com$/i,
-];
+// CALENDAR_ALLOWLIST now lives in ./calendars.ts (single source of truth) and is
+// re-exported below to preserve the existing `@otskit/core` import surface.
+// The consumer (@otskit/client) must also resolve DNS and reject
+// private/loopback/link-local ranges before fetching.
+export { CALENDAR_ALLOWLIST };
 
 /**
  * Valida una URI de calendario antes de usarla en una petición de red.

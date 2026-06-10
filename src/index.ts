@@ -42,3 +42,9 @@ export type { Branch, BlockHeaderProvider } from './timestamp.js';
 export { Timestamp } from './timestamp.js';
 export { makeMerkleTree } from './merkle.js';
 export { DetachedTimestampFile } from './detached-timestamp-file.js';
+export {
+  TRUSTED_CALENDAR_DOMAINS,
+  TRUSTED_CALENDAR_WHITELIST_PATTERNS,
+  DEFAULT_CALENDAR_URLS,
+  DEFAULT_AGGREGATOR_URLS,
+} from './calendars.js';
