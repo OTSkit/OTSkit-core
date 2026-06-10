@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/OTSkit/OTSkit-core/compare/v0.1.7...v0.2.0) (2026-06-10)
+
+
+### Features
+
+* add canonical calendar module as single source of truth ([9dfc422](https://github.com/OTSkit/OTSkit-core/commit/9dfc422f538422e11d6abc209ae8380c0ca00484))
+
 ## [0.1.7](https://github.com/OTSkit/OTSkit-core/compare/v0.1.6...v0.1.7) (2026-06-07)
 
 
