@@ -39,10 +39,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run coverage
-      - uses: codecov/codecov-action@v5
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: OTSkit/OTSkit-core
           fail_ci_if_error: false
           files: ./coverage/lcov.info
 
