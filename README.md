@@ -11,6 +11,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-blue.svg)](https://www.typescriptlang.org/)
 [![Node ≥20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![Coverage](https://codecov.io/gh/OTSkit/OTSkit-core/branch/main/graph/badge.svg)](https://codecov.io/gh/OTSkit/OTSkit-core)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=OTSkit_OTSkit-core&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=OTSkit_OTSkit-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 OpenTimestamps core library — TypeScript, zero-dependency, fail-closed.
