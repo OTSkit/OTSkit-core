@@ -29,7 +29,7 @@ describe('readVaruint (LEB128)', () => {
   });
 
   it('lanza VaruintOverflowError si excede MAX_SAFE_INTEGER', () => {
-    // 9 bytes de 0xff fuerzan un valor por encima del límite seguro
+    // 9 bytes of 0xff force a value above the safe-integer limit
     const bytes = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
     expect(() => de(bytes).readVaruint()).toThrow(VaruintOverflowError);
   });
@@ -50,7 +50,7 @@ describe('readVaruint (LEB128)', () => {
 });
 
 describe('read / readVarbytes', () => {
-  it('read más allá del final lanza TruncatedStreamError', () => {
+  it('read past the end throws TruncatedStreamError', () => {
     expect(() => de(new Uint8Array([0x01])).read(2)).toThrow(TruncatedStreamError);
   });
 
@@ -103,9 +103,9 @@ describe('assertMagic / assertEof', () => {
   });
 });
 
-describe('serialización de bytes', () => {
+describe('byte serialization', () => {
   it('rechaza entrada que no es Uint8Array', () => {
-    // @ts-expect-error entrada inválida deliberada
+    // @ts-expect-error deliberately invalid input
     expect(() => new StreamDeserializationContext([1, 2, 3])).toThrow(/Uint8Array/);
   });
 
@@ -133,7 +133,7 @@ describe('StreamSerializationContext extras', () => {
     expect(() => ser().writeByte(256)).toThrow(RangeError);
   });
 
-  it('el buffer crece automáticamente al superar 4096 bytes', () => {
+  it('the buffer grows automatically past 4096 bytes', () => {
     const s = ser();
     for (let i = 0; i < 4097; i++) s.writeByte(0xaa);
     expect(s.length).toBe(4097);
@@ -150,11 +150,11 @@ describe('readVaruint modo strict (L3)', () => {
     expect(() => de(new Uint8Array([0x80, 0x00])).readVaruint({ strict: true })).toThrow(NonCanonicalVaruintError);
   });
 
-  it('encoding canónico de 0 (0x00) pasa el modo strict', () => {
+  it('canonical encoding of 0 (0x00) passes strict mode', () => {
     expect(de(new Uint8Array([0x00])).readVaruint({ strict: true })).toBe(0);
   });
 
-  it('encoding canónico de 128 (0x80 0x01) pasa el modo strict', () => {
+  it('canonical encoding of 128 (0x80 0x01) passes strict mode', () => {
     expect(de(new Uint8Array([0x80, 0x01])).readVaruint({ strict: true })).toBe(128);
   });
 
@@ -169,7 +169,7 @@ describe('read con length negativo', () => {
   });
 });
 
-describe('casos límite de cobertura', () => {
+describe('coverage edge cases', () => {
   it('counter refleja los bytes consumidos', () => {
     const ctx = de(new Uint8Array([1, 2, 3]));
     expect(ctx.counter).toBe(0);
@@ -177,8 +177,8 @@ describe('casos límite de cobertura', () => {
     expect(ctx.counter).toBe(2);
   });
 
-  it('readVaruint lanza VaruintOverflowError por shift > 56 (10 bytes de continuación)', () => {
-    // 9 bytes con bit de continuación (0x80, valor 0) + 1 byte final: shift llega a 63 > 56
+  it('readVaruint throws VaruintOverflowError for shift > 56 (10 continuation bytes)', () => {
+    // 9 bytes with continuation bit (0x80, value 0) + 1 final byte: shift reaches 63 > 56
     const bytes = new Uint8Array([0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01]);
     expect(() => de(bytes).readVaruint()).toThrow(VaruintOverflowError);
   });

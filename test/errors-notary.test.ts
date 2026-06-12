@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { DeserializationError, InvalidUriError, VerificationError } from '../src/errors.js';
 
-describe('errores de atestación', () => {
+describe('attestation errors', () => {
   it('InvalidUriError es un DeserializationError', () => {
     const e = new InvalidUriError('bad uri');
     expect(e).toBeInstanceOf(DeserializationError);

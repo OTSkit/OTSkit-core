@@ -31,7 +31,7 @@ describe('OpAppend', () => {
     expect(new OpAppend(new Uint8Array([1])).equals(new OpPrepend(new Uint8Array([1])))).toBe(false);
   });
   it('rechaza arg que no es Uint8Array', () => {
-    // @ts-expect-error arg inválido
+    // @ts-expect-error invalid arg
     expect(() => new OpAppend([1, 2])).toThrow(/Uint8Array/);
   });
   it('mensaje demasiado largo lanza MessageTooLongError', () => {
@@ -83,13 +83,13 @@ describe('OpReverse', () => {
 
 describe('OpHexlify', () => {
   it('TAG', () => { expect(OpHexlify.TAG).toBe(0xf3); });
-  it('call produce la representación hex ASCII', () => {
+  it('call produces the ASCII hex representation', () => {
     expect(Array.from(new OpHexlify().call(new Uint8Array([0xde, 0xad])))).toEqual([0x64, 0x65, 0x61, 0x64]);
   });
   it('serialize → [tag]', () => {
     expect(out(new OpHexlify())).toEqual([0xf3]);
   });
-  it('rechaza mensaje > 2048 bytes (límite propio)', () => {
+  it('rejects messages > 2048 bytes (own limit)', () => {
     expect(() => new OpHexlify().call(new Uint8Array(2049))).toThrow(/exceeds/);
   });
   it('equals por tipo', () => {
@@ -180,7 +180,7 @@ it('buildTagTable rechaza tags duplicados', () => {
 });
 
 describe('Op.deserializeFromTag', () => {
-  it('despacha con un tag ya leído (binaria)', () => {
+  it('dispatches with an already-read tag (binary)', () => {
     // 0xf0 = append; el ctx solo contiene el varbytes del arg: [0x02, 0xde, 0xad]
     const ctx = new StreamDeserializationContext(new Uint8Array([0x02, 0xde, 0xad]));
     const op = Op.deserializeFromTag(ctx, 0xf0);
@@ -195,19 +195,19 @@ describe('Op.deserializeFromTag', () => {
 });
 
 describe('CryptOp.hashFile', () => {
-  it('hashea contenido mayor que MAX_MSG_LENGTH (call sí lo rechaza)', () => {
+  it('hashes content larger than MAX_MSG_LENGTH (call does reject it)', () => {
     const big = new Uint8Array(Op.MAX_MSG_LENGTH + 1000).fill(0x41);
     expect(() => new OpSHA256().call(big)).toThrow(MessageTooLongError);
     expect(new OpSHA256().hashFile(big).length).toBe(32);
   });
 
-  it('hashFile coincide con call para mensajes pequeños', () => {
+  it('hashFile matches call for small messages', () => {
     const m = new Uint8Array([1, 2, 3]);
     expect(bytesToHex(new OpSHA256().hashFile(m))).toEqual(bytesToHex(new OpSHA256().call(m)));
   });
 
   it('rechaza entrada que no es Uint8Array', () => {
-    // @ts-expect-error entrada inválida deliberada
+    // @ts-expect-error deliberately invalid input
     expect(() => new OpSHA256().hashFile([1, 2, 3])).toThrow(TypeError);
   });
 });

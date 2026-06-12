@@ -1,14 +1,14 @@
 // test/hashes/sha256.test.ts
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { createHash } from 'node:crypto'; // SOLO oráculo de test (built-in de Node); no es dependencia de runtime
+import { createHash } from 'node:crypto'; // test oracle ONLY (Node built-in); not a runtime dependency
 import { sha256 } from '../../src/hashes/sha256.js';
 import { bytesToHex, textToBytes } from '../../src/utils.js';
 
 const hex = (s: string) => bytesToHex(sha256(textToBytes(s)));
 
 describe('sha256', () => {
-  it('cadena vacía', () => {
+  it('empty string', () => {
     expect(hex('')).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
   });
   it('"abc"', () => {
@@ -19,7 +19,7 @@ describe('sha256', () => {
       '248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1',
     );
   });
-  it('un millón de "a"', () => {
+  it('one million "a"', () => {
     const msg = new Uint8Array(1_000_000).fill(0x61);
     expect(bytesToHex(sha256(msg))).toBe('cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0');
   });

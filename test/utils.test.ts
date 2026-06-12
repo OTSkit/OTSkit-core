@@ -4,11 +4,11 @@ import * as fc from 'fast-check';
 import { hexToBytes, bytesToHex, textToBytes, bytesToText, bytesEqual, compareBytes, randBytes } from '../src/utils.js';
 
 describe('hexToBytes / bytesToHex', () => {
-  it('hex vacío → array vacío', () => {
+  it('empty hex → empty array', () => {
     expect(hexToBytes('')).toEqual(new Uint8Array(0));
   });
 
-  it('parsea hex válido', () => {
+  it('parses valid hex', () => {
     expect(hexToBytes('00ff10')).toEqual(new Uint8Array([0x00, 0xff, 0x10]));
   });
 
@@ -28,8 +28,8 @@ describe('hexToBytes / bytesToHex', () => {
     );
   });
 
-  it('bytesToHex usa el valor, no el índice', () => {
-    // regresión del bug bytesToChars del original
+  it('bytesToHex uses the value, not the index', () => {
+    // regression for the bytesToChars bug in the original
     expect(bytesToHex(new Uint8Array([0xde, 0xad]))).toBe('dead');
   });
 });
@@ -40,14 +40,14 @@ describe('texto', () => {
   });
 });
 
-describe('comparación', () => {
+describe('comparison', () => {
   it('bytesEqual', () => {
     expect(bytesEqual(new Uint8Array([1, 2]), new Uint8Array([1, 2]))).toBe(true);
     expect(bytesEqual(new Uint8Array([1, 2]), new Uint8Array([1, 3]))).toBe(false);
     expect(bytesEqual(new Uint8Array([1]), new Uint8Array([1, 2]))).toBe(false);
   });
 
-  it('compareBytes ordena lexicográficamente', () => {
+  it('compareBytes orders lexicographically', () => {
     expect(compareBytes(new Uint8Array([1]), new Uint8Array([2]))).toBeLessThan(0);
     expect(compareBytes(new Uint8Array([1, 2]), new Uint8Array([1]))).toBeGreaterThan(0);
     expect(compareBytes(new Uint8Array([5]), new Uint8Array([5]))).toBe(0);
@@ -61,11 +61,11 @@ describe('randBytes', () => {
     expect(r.length).toBe(16);
   });
 
-  it('n=0 → Uint8Array vacío', () => {
+  it('n=0 → empty Uint8Array', () => {
     expect(randBytes(0)).toEqual(new Uint8Array(0));
   });
 
-  it('lanza si crypto no está disponible (fail-closed, nunca Math.random)', () => {
+  it('throws when crypto is unavailable (fail-closed, never Math.random)', () => {
     const original = globalThis.crypto;
     // @ts-expect-error forzamos ausencia de crypto
     delete (globalThis as { crypto?: Crypto }).crypto;

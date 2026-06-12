@@ -14,7 +14,7 @@ describe('catSha256', () => {
     expect(Array.from(tip.msg)).toEqual(Array.from(expected));
   });
 
-  it('left y right comparten el mismo nodo de concatenación', () => {
+  it('left and right share the same concatenation node', () => {
     const left = new Timestamp(new Uint8Array([0x01]));
     const right = new Timestamp(new Uint8Array([0x02]));
     catSha256(left, right);
@@ -45,9 +45,9 @@ describe('catSha256', () => {
 
   it('rechaza argumentos que no son Timestamp', () => {
     const t = new Timestamp(new Uint8Array([0x01]));
-    // @ts-expect-error entrada inválida deliberada
+    // @ts-expect-error deliberately invalid input
     expect(() => catSha256(t, {})).toThrow(TypeError);
-    // @ts-expect-error entrada inválida deliberada
+    // @ts-expect-error deliberately invalid input
     expect(() => catSha256({}, t)).toThrow(TypeError);
   });
 });
@@ -74,14 +74,14 @@ describe('catSha256d', () => {
 });
 
 describe('makeMerkleTree', () => {
-  it('un solo timestamp se devuelve a sí mismo sin modificar', () => {
+  it('a single timestamp returns itself unmodified', () => {
     const a = new Timestamp(new Uint8Array([0x01]));
     const root = makeMerkleTree([a]);
     expect(root).toBe(a);
     expect(a.branches.length).toBe(0);
   });
 
-  it('dos timestamps → la raíz es SHA256(a ++ b)', () => {
+  it('two timestamps → the root is SHA256(a ++ b)', () => {
     const a = new Timestamp(new Uint8Array([0x01]));
     const b = new Timestamp(new Uint8Array([0x02]));
     const root = makeMerkleTree([a, b]);
@@ -90,7 +90,7 @@ describe('makeMerkleTree', () => {
     );
   });
 
-  it('estructura MMR para 3 hojas: raíz = SHA256(SHA256(a ++ b) ++ c)', () => {
+  it('MMR structure for 3 leaves: root = SHA256(SHA256(a ++ b) ++ c)', () => {
     const a = new Timestamp(new Uint8Array([0x0a]));
     const b = new Timestamp(new Uint8Array([0x0b]));
     const c = new Timestamp(new Uint8Array([0x0c]));
@@ -100,7 +100,7 @@ describe('makeMerkleTree', () => {
     expect(Array.from(root.msg)).toEqual(Array.from(abc));
   });
 
-  it('una attestation en la raíz completa TODAS las hojas (5 hojas, caso impar)', () => {
+  it('one attestation at the root completes ALL leaves (5 leaves, odd case)', () => {
     const leaves = [0x01, 0x02, 0x03, 0x04, 0x05].map((b) => new Timestamp(new Uint8Array([b])));
     const root = makeMerkleTree(leaves);
     root.addAttestation(makeBitcoin(42));
@@ -109,13 +109,13 @@ describe('makeMerkleTree', () => {
     }
   });
 
-  it('lista vacía → EmptyMerkleTreeError (B4)', () => {
+  it('empty list → EmptyMerkleTreeError (B4)', () => {
     expect(() => makeMerkleTree([])).toThrow(EmptyMerkleTreeError);
   });
 
   it('elemento que no es Timestamp → TypeError (B5)', () => {
     const ok = new Timestamp(new Uint8Array([1]));
-    // @ts-expect-error entrada inválida deliberada
+    // @ts-expect-error deliberately invalid input
     expect(() => makeMerkleTree([ok, {}])).toThrow(TypeError);
   });
 

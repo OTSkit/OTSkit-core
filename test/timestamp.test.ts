@@ -38,19 +38,19 @@ const pendingBytes = (uri: string): number[] => {
 // ─── L2: addAttestation / attestations inmutables ────────────────────────────
 
 describe('Timestamp — addAttestation / attestations inmutables (L2)', () => {
-  it('addAttestation añade una attestation válida y es visible por el getter', () => {
+  it('addAttestation adds a valid attestation, visible through the getter', () => {
     const ts = new Timestamp(new Uint8Array(32));
     ts.addAttestation(makeBitcoin(100));
     expect(ts.attestations.length).toBe(1);
     expect(ts.attestations[0]?.kind).toBe('bitcoin');
   });
 
-  it('addAttestation con objeto vacío lanza TypeError', () => {
+  it('addAttestation with an empty object throws TypeError', () => {
     // @ts-expect-error invalid attestation deliberada
     expect(() => new Timestamp(new Uint8Array(32)).addAttestation({})).toThrow(TypeError);
   });
 
-  it('addAttestation con null lanza TypeError (línea 78)', () => {
+  it('addAttestation with null throws TypeError (line 78)', () => {
     // @ts-expect-error null deliberado
     expect(() => new Timestamp(new Uint8Array(32)).addAttestation(null)).toThrow(TypeError);
   });
@@ -75,11 +75,11 @@ describe('Timestamp — constructor', () => {
   });
 
   it('rechaza un Array plano con TypeError (S4)', () => {
-    // @ts-expect-error entrada inválida deliberada
+    // @ts-expect-error deliberately invalid input
     expect(() => new Timestamp([1, 2, 3])).toThrow(TypeError);
   });
 
-  it('msg vacío es válido', () => {
+  it('an empty msg is valid', () => {
     expect(() => new Timestamp(new Uint8Array(0))).not.toThrow();
   });
 
@@ -87,7 +87,7 @@ describe('Timestamp — constructor', () => {
     expect(() => new Timestamp(new Uint8Array(Op.MAX_MSG_LENGTH + 1))).toThrow(TypeError);
   });
 
-  it('un timestamp recién creado no tiene ramas ni attestations', () => {
+  it('a freshly created timestamp has no branches and no attestations', () => {
     const ts = new Timestamp(new Uint8Array([1]));
     expect(ts.branches).toEqual([]);
     expect(ts.attestations).toEqual([]);
@@ -104,7 +104,7 @@ describe('Timestamp — constructor', () => {
 // ─── Task 4: serialize / deserialize ──────────────────────────────────────────
 
 describe('Timestamp — serialize / deserialize', () => {
-  it('un timestamp vacío no se puede serializar', () => {
+  it('an empty timestamp cannot be serialized', () => {
     expect(() => new Timestamp(MSG32).serialize(new StreamSerializationContext())).toThrow(
       EmptyTimestampError,
     );
@@ -125,7 +125,7 @@ describe('Timestamp — serialize / deserialize', () => {
     expect(reserialize(back)).toEqual(reserialize(ts));
   });
 
-  it('round-trip: múltiples ramas (fork con 0xff) + attestation en el nodo', () => {
+  it('round-trip: multiple branches (0xff fork) + attestation on the node', () => {
     const ts = new Timestamp(MSG32);
     ts.addAttestation(makeBitcoin(1));
     ts.add(new OpReverse()).addAttestation(makeBitcoin(2));
@@ -134,7 +134,7 @@ describe('Timestamp — serialize / deserialize', () => {
     expect(reserialize(back)).toEqual(reserialize(ts));
   });
 
-  it('orden canónico: el orden de inserción de las ops no cambia los bytes (B3)', () => {
+  it('canonical order: op insertion order does not change the bytes (B3)', () => {
     const build = (order: 'ab' | 'ba'): Timestamp => {
       const t = new Timestamp(MSG32);
       const addRev = () => t.add(new OpReverse()).addAttestation(makeBitcoin(1));
@@ -151,7 +151,7 @@ describe('Timestamp — serialize / deserialize', () => {
     expect(reserialize(build('ab'))).toEqual(reserialize(build('ba')));
   });
 
-  it('orden canónico: el orden de las attestations tampoco cambia los bytes', () => {
+  it('canonical order: attestation order does not change the bytes either', () => {
     const build = (order: 'ab' | 'ba'): Timestamp => {
       const t = new Timestamp(MSG32);
       if (order === 'ab') {
@@ -166,21 +166,21 @@ describe('Timestamp — serialize / deserialize', () => {
     expect(reserialize(build('ab'))).toEqual(reserialize(build('ba')));
   });
 
-  it('profundidad bajo el límite (256) → OK', () => {
+  it('depth under the limit (256) → OK', () => {
     const bytes = new Uint8Array([...new Array(256).fill(0xf2), 0x00, ...pendingBytes('https://x.org')]);
     expect(() => Timestamp.deserialize(de(bytes), MSG32)).not.toThrow();
   });
 
-  it('profundidad sobre el límite (257) → OversizedDataError (S1)', () => {
+  it('depth over the limit (257) → OversizedDataError (S1)', () => {
     const bytes = new Uint8Array([...new Array(257).fill(0xf2), 0x00, ...pendingBytes('https://x.org')]);
     expect(() => Timestamp.deserialize(de(bytes), MSG32)).toThrow(OversizedDataError);
   });
 
-  it('stream vacío → TruncatedStreamError (B6)', () => {
+  it('empty stream → TruncatedStreamError (B6)', () => {
     expect(() => Timestamp.deserialize(de([]), MSG32)).toThrow(TruncatedStreamError);
   });
 
-  it('0xff como último byte → TruncatedStreamError', () => {
+  it('0xff as the last byte → TruncatedStreamError', () => {
     expect(() => Timestamp.deserialize(de([0xff]), MSG32)).toThrow(TruncatedStreamError);
   });
 
@@ -197,7 +197,7 @@ describe('Timestamp — serialize / deserialize', () => {
     expect(() => Timestamp.deserialize(de([0xf0, 0x05]), MSG32)).toThrow(TruncatedStreamError);
   });
 
-  it('operación que desborda durante deserialize → DeserializationError', () => {
+  it('operation overflowing during deserialize → DeserializationError', () => {
     // 0xf0 append con arg de 4096 bytes → result 32+4096 > MAX_RESULT_LENGTH
     const arg = new Array(4096).fill(0x00);
     const bytes = new Uint8Array([0xf0, 0x80, 0x20, ...arg]);
@@ -208,13 +208,13 @@ describe('Timestamp — serialize / deserialize', () => {
 // ─── Task 5: merge / add ───────────────────────────────────────────────────────
 
 describe('Timestamp — merge / add', () => {
-  it('merge añade las attestations del otro sin duplicar', () => {
+  it('merge adds the other timestamp attestations without duplicating', () => {
     const m = new Uint8Array([9, 9]);
     const a = new Timestamp(m);
     a.addAttestation(makeBitcoin(1));
     const b = new Timestamp(m);
-    b.addAttestation(makeBitcoin(1)); // duplicada → no se añade
-    b.addAttestation(makeBitcoin(2)); // nueva → se añade
+    b.addAttestation(makeBitcoin(1)); // duplicate → not added
+    b.addAttestation(makeBitcoin(2)); // new → added
     a.merge(b);
     expect(a.attestations.length).toBe(2);
   });
@@ -230,7 +230,7 @@ describe('Timestamp — merge / add', () => {
     expect(a.branches[0]!.stamp.attestations.length).toBe(2);
   });
 
-  it('merge crea la rama si no existía localmente', () => {
+  it('merge creates the branch when it did not exist locally', () => {
     const m = new Uint8Array([1, 2, 3, 4]);
     const a = new Timestamp(m);
     const b = new Timestamp(m);
@@ -247,7 +247,7 @@ describe('Timestamp — merge / add', () => {
   });
 
   it('merge rechaza algo que no es Timestamp', () => {
-    // @ts-expect-error tipo inválido deliberado
+    // @ts-expect-error deliberately invalid type
     expect(() => new Timestamp(new Uint8Array([1])).merge({})).toThrow(MergeError);
   });
 
@@ -260,7 +260,7 @@ describe('Timestamp — merge / add', () => {
   });
 });
 
-// ─── Task 6: recorridos del árbol ─────────────────────────────────────────────
+// ─── Task 6: tree traversals ──────────────────────────────────────────────────
 
 describe('Timestamp — recorridos', () => {
   it('allAttestations conserva varias attestations del mismo nodo (B2)', () => {
@@ -270,7 +270,7 @@ describe('Timestamp — recorridos', () => {
     expect(t.allAttestations().length).toBe(2);
   });
 
-  it('allAttestations recorre los sub-árboles', () => {
+  it('allAttestations traverses the sub-trees', () => {
     const t = new Timestamp(MSG32);
     t.add(new OpSHA256()).addAttestation(makeBitcoin(9));
     const entries = t.allAttestations();
@@ -279,7 +279,7 @@ describe('Timestamp — recorridos', () => {
     expect(entries[0]!.msg.length).toBe(32); // el msg del sub-nodo
   });
 
-  it('getAttestations devuelve todas las attestations del árbol', () => {
+  it('getAttestations returns every attestation in the tree', () => {
     const t = new Timestamp(new Uint8Array([1]));
     t.addAttestation(makeBitcoin(1));
     t.addAttestation(makeBitcoin(2));
@@ -312,7 +312,7 @@ describe('Timestamp — recorridos', () => {
     expect(dv).toEqual([sub]);
   });
 
-  it('directlyVerified: un nodo con attestation se devuelve a sí mismo', () => {
+  it('directlyVerified: a node holding an attestation returns itself', () => {
     const t = new Timestamp(new Uint8Array([1]));
     t.addAttestation(makeBitcoin(1));
     expect(t.directlyVerified()).toEqual([t]);
@@ -341,11 +341,11 @@ describe('Timestamp — equals', () => {
     return t;
   };
 
-  it('árboles idénticos → true', () => {
+  it('identical trees → true', () => {
     expect(buildSha(1).equals(buildSha(1))).toBe(true);
   });
 
-  it('ops distintas con el mismo tamaño → false (B1)', () => {
+  it('different ops with the same size → false (B1)', () => {
     const m = new Uint8Array([1, 2, 3, 4]);
     const a = new Timestamp(m);
     a.add(new OpSHA256()).addAttestation(makeBitcoin(1));
@@ -362,7 +362,7 @@ describe('Timestamp — equals', () => {
     expect(new Timestamp(new Uint8Array([1])).equals(new Timestamp(new Uint8Array([2])))).toBe(false);
   });
 
-  it('distinto número de attestations → false', () => {
+  it('different number of attestations → false', () => {
     const a = new Timestamp(new Uint8Array([1]));
     a.addAttestation(makeBitcoin(1));
     expect(a.equals(new Timestamp(new Uint8Array([1])))).toBe(false);
@@ -376,7 +376,7 @@ describe('Timestamp — equals', () => {
     expect(a.equals(b)).toBe(false);
   });
 
-  it('distinto tamaño de ops → false', () => {
+  it('different number of ops → false', () => {
     const m = new Uint8Array([1, 2, 3, 4]);
     const a = new Timestamp(m);
     a.add(new OpSHA256());
@@ -416,14 +416,14 @@ describe('Timestamp — addExisting (cross-link Merkle)', () => {
 
   it('rechaza un stamp que no es Timestamp', () => {
     const left = new Timestamp(new Uint8Array([0x11]));
-    // @ts-expect-error tipo inválido deliberado
+    // @ts-expect-error deliberately invalid type
     expect(() => left.addExisting(new OpAppend(new Uint8Array([0x22])), {})).toThrow(TypeError);
   });
 });
 
 // ─── M2: hasBitcoinAttestation / verifyBitcoin ────────────────────────────────
 
-// Bloque génesis de Bitcoin (80 bytes, mismo vector que en notary.test.ts)
+// Bitcoin genesis block (80 bytes, same vector as in notary.test.ts)
 const GENESIS_RAW_HEADER_HEX_TS =
   '01000000' +
   '0000000000000000000000000000000000000000000000000000000000000000' +
@@ -438,7 +438,7 @@ const GENESIS_MERKLE_ROOT_INTERNAL = hexToBytes(
 const GENESIS_TIME = 1231006505;
 
 describe('Timestamp — hasBitcoinAttestation (M2)', () => {
-  it('devuelve true si hay una attestation Bitcoin en el árbol', () => {
+  it('returns true when the tree holds a Bitcoin attestation', () => {
     const ts = new Timestamp(new Uint8Array(32));
     ts.addAttestation(makeBitcoin(100));
     expect(ts.hasBitcoinAttestation()).toBe(true);
@@ -470,7 +470,7 @@ describe('Timestamp — verifyBitcoin (M2)', () => {
     await expect(ts.verifyBitcoin(provider)).resolves.toBe(GENESIS_TIME);
   });
 
-  it('lanza VerificationError cuando el provider devuelve un header erróneo', async () => {
+  it('throws VerificationError when the provider returns a wrong header', async () => {
     const ts = new Timestamp(GENESIS_MERKLE_ROOT_INTERNAL);
     ts.addAttestation(makeBitcoin(0));
     const wrongHeader = new Uint8Array(80); // todo ceros → merkle root y time no coinciden
@@ -480,7 +480,7 @@ describe('Timestamp — verifyBitcoin (M2)', () => {
     await expect(ts.verifyBitcoin(provider)).rejects.toThrow(VerificationError);
   });
 
-  it('lanza VerificationError cuando no hay ninguna attestation Bitcoin en el árbol', async () => {
+  it('throws VerificationError when the tree holds no Bitcoin attestation', async () => {
     const ts = new Timestamp(new Uint8Array(32));
     ts.addAttestation(makePending('https://a.pool.opentimestamps.org'));
     const provider: BlockHeaderProvider = {

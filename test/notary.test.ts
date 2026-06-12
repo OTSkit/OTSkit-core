@@ -16,7 +16,7 @@ import { StreamDeserializationContext, StreamSerializationContext } from '../src
 import { TruncatedStreamError, OversizedDataError, TrailingGarbageError } from '../src/errors.js';
 import type { Attestation } from '../src/notary.js';
 
-describe('factorías', () => {
+describe('factories', () => {
   it('makePending fija el tag correcto y conserva uri/uriBytes', () => {
     const att = makePending('https://a.pool.opentimestamps.org');
     expect(att.kind).toBe('pending');
@@ -25,12 +25,12 @@ describe('factorías', () => {
     expect(Array.from(att.uriBytes)).toEqual(Array.from(new TextEncoder().encode(att.uri)));
   });
 
-  it('makePending rechaza URI vacía', () => {
+  it('makePending rejects an empty URI', () => {
     expect(() => makePending('')).toThrow(InvalidUriError);
   });
 
   it.each(['has space', 'a\nb', 'a?b', 'a#b', 'a%b', 'a@b', 'a\\b', 'a"b', 'a\x00b', 'a\x7fb', 'a\x80b', 'a\xffb'])(
-    'makePending rechaza URI con carácter inválido (%j)',
+    'makePending rejects a URI with an invalid character (%j)',
     (uri) => {
       expect(() => makePending(uri)).toThrow(InvalidUriError);
     },
@@ -47,7 +47,7 @@ describe('factorías', () => {
     expect(l.height).toBe(0);
   });
 
-  it('makeBitcoin rechaza alturas inválidas', () => {
+  it('makeBitcoin rejects invalid heights', () => {
     expect(() => makeBitcoin(-1)).toThrow(RangeError);
     expect(() => makeBitcoin(1.5)).toThrow(RangeError);
     expect(() => makeBitcoin(Number.MAX_SAFE_INTEGER + 1)).toThrow(RangeError);
@@ -125,13 +125,13 @@ describe('deserializeAttestation', () => {
     expect(() => deserializeAttestation(de([...BITCOIN_TAG_BYTES, 0x80]))).toThrow(TruncatedStreamError);
   });
 
-  it('varuint de longitud sin terminación → error, no bucle', () => {
+  it('unterminated length varuint → error, not a loop', () => {
     expect(() => deserializeAttestation(de([...BITCOIN_TAG_BYTES, 0x80, 0x80, 0x80]))).toThrow(
       TruncatedStreamError,
     );
   });
 
-  it('payload que declara más bytes de los presentes → TruncatedStreamError', () => {
+  it('payload declaring more bytes than present → TruncatedStreamError', () => {
     expect(() => deserializeAttestation(de([...PENDING_TAG_BYTES, 0x05, 0x01, 0x02]))).toThrow(
       TruncatedStreamError,
     );
@@ -151,7 +151,7 @@ describe('deserializeAttestation', () => {
     );
   });
 
-  it('URI inválida en pending → InvalidUriError (no undefined)', () => {
+  it('invalid URI in pending → InvalidUriError (not undefined)', () => {
     // payload = varbytes(" ") = [0x01, 0x20] (espacio no permitido); outer = [0x02, 0x01, 0x20]
     expect(() => deserializeAttestation(de([...PENDING_TAG_BYTES, 0x02, 0x01, 0x20]))).toThrow(
       InvalidUriError,
@@ -267,10 +267,10 @@ describe('attestationsEqual', () => {
   });
 });
 
-// ─── M4: verifyAgainstRawHeader — endianness explícita ────────────────────────
+// ─── M4: verifyAgainstRawHeader — explicit endianness ─────────────────────────
 
-// Cabecera del bloque génesis de Bitcoin (80 bytes):
-//   versión:      01000000  (little-endian)
+// Bitcoin genesis block header (80 bytes):
+//   version:      01000000  (little-endian)
 //   prev_hash:    0000...0000  (32 bytes ceros)
 //   merkle_root:  3ba3edfd...e4a  (orden interno, 32 bytes)
 //   time:         29ab5f49  (LE) = 1231006505
@@ -285,7 +285,7 @@ const GENESIS_RAW_HEADER_HEX =
   '1dac2b7c';
 
 describe('verifyAgainstRawHeader (M4)', () => {
-  it('bloque génesis: verifica con merkle root en orden interno', () => {
+  it('genesis block: verifies with the merkle root in internal order', () => {
     const rawHeader = hexToBytes(GENESIS_RAW_HEADER_HEX);
     const merkleRootInternal = hexToBytes('3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a');
     expect(verifyAgainstRawHeader(merkleRootInternal, rawHeader)).toBe(1231006505);
@@ -429,15 +429,15 @@ describe('parseCalendarUri (L1 — anti-SSRF)', () => {
 });
 
 describe('verifyAgainstRawHeader — block time cero', () => {
-  it('lanza VerificationError si block time es cero (línea 285)', () => {
+  it('throws VerificationError when block time is zero (line 285)', () => {
     const rawHeader = new Uint8Array(80);
     const digest = new Uint8Array(32);
     expect(() => verifyAgainstRawHeader(digest, rawHeader)).toThrow(VerificationError);
   });
 
-  it('lanza VerificationError si rawHeader no es Uint8Array (branch non-Uint8Array, línea 275)', () => {
+  it('throws VerificationError when rawHeader is not a Uint8Array (non-Uint8Array branch, line 275)', () => {
     const digest = new Uint8Array(32);
-    // @ts-expect-error argumento inválido deliberado
+    // @ts-expect-error deliberately invalid argument
     expect(() => verifyAgainstRawHeader(digest, 'not-a-uint8array')).toThrow(VerificationError);
   });
 });

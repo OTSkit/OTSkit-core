@@ -14,12 +14,12 @@ import {
   WeakHashError,
 } from '../src/errors.js';
 
-// --- Vector .ots CANÓNICO (121 bytes), derivado del formato real (NO de esta librería) ---
+// --- CANONICAL .ots vector (121 bytes), derived from the real format (NOT from this library) ---
 // notary.js serialize: tag[8] + writeVarbytes(payload); payload pending = writeVarbytes(uri).
-// timestamp.js serialize: un único elemento '00 <attestation>' (1 sola attestation, sin 0xff).
+// timestamp.js serialize: a single element '00 <attestation>' (1 attestation only, no 0xff).
 // Desglose byte a byte:
-//   004f...e89294            (31)  cabecera mágica
-//   01                       ( 1)  versión mayor = 1
+//   004f...e89294            (31)  magic header
+//   01                       ( 1)  major version = 1
 //   08                       ( 1)  op tag = SHA256
 //   aa × 32                  (32)  digest del fichero (0xaa repetido)
 //   00                       ( 1)  marcador de attestation
@@ -54,7 +54,7 @@ describe('DetachedTimestampFile — constructor', () => {
   });
 
   it('rechaza timestamp que no es Timestamp', () => {
-    // @ts-expect-error entrada inválida deliberada
+    // @ts-expect-error deliberately invalid input
     expect(() => new DetachedTimestampFile(new OpSHA256(), {})).toThrow(TypeError);
   });
 
@@ -71,13 +71,13 @@ describe('DetachedTimestampFile — constructor', () => {
 });
 
 describe('DetachedTimestampFile — serialize', () => {
-  it('serializeToBytes reproduce el vector canónico byte a byte', () => {
+  it('serializeToBytes reproduces the canonical vector byte for byte', () => {
     expect(bytesToHex(canonicalDtf().serializeToBytes())).toBe(CANONICAL_OTS_HEX);
   });
 });
 
 describe('DetachedTimestampFile — deserialize / compatibilidad', () => {
-  it('deserializa el vector canónico y reproduce sus bytes (round-trip byte-exacto)', () => {
+  it('deserializes the canonical vector and reproduces its bytes (byte-exact round-trip)', () => {
     const bytes = hexToBytes(CANONICAL_OTS_HEX);
     const dtf = DetachedTimestampFile.deserialize(bytes);
     expect(dtf.fileHashOp).toBeInstanceOf(OpSHA256);
@@ -91,30 +91,30 @@ describe('DetachedTimestampFile — deserialize / compatibilidad', () => {
     expect(bytesToHex(dtf.serializeToBytes())).toBe(CANONICAL_OTS_HEX);
   });
 
-  it('round-trip semántico: deserialize(serialize(x)).equals(x)', () => {
+  it('semantic round-trip: deserialize(serialize(x)).equals(x)', () => {
     const dtf = canonicalDtf();
     const back = DetachedTimestampFile.deserialize(dtf.serializeToBytes());
     expect(back.equals(dtf)).toBe(true);
   });
 
   it('rechaza entrada que no es Uint8Array', () => {
-    // @ts-expect-error entrada inválida deliberada
+    // @ts-expect-error deliberately invalid input
     expect(() => DetachedTimestampFile.deserialize([1, 2, 3])).toThrow(TypeError);
   });
 
-  it('cabecera mágica incorrecta → BadMagicError', () => {
+  it('wrong magic header → BadMagicError', () => {
     const bad = hexToBytes('ff' + CANONICAL_OTS_HEX.slice(2));
     expect(() => DetachedTimestampFile.deserialize(bad)).toThrow(BadMagicError);
   });
 
-  it('versión mayor ≠ 1 → UnsupportedVersionError', () => {
-    // el byte de versión es el char 62-63 del hex (tras los 31 bytes de magic)
+  it('major version ≠ 1 → UnsupportedVersionError', () => {
+    // the version byte is hex chars 62-63 (after the 31 magic bytes)
     const bad = hexToBytes(CANONICAL_OTS_HEX.slice(0, 62) + '02' + CANONICAL_OTS_HEX.slice(64));
     expect(() => DetachedTimestampFile.deserialize(bad)).toThrow(UnsupportedVersionError);
   });
 
   it('op del fichero que no es CryptOp → DeserializationError', () => {
-    // magic + versión 01 + 0xf2 (OpReverse, unaria, sin arg) → no es CryptOp
+    // magic + version 01 + 0xf2 (OpReverse, unary, no arg) → not a CryptOp
     const bad = hexToBytes(CANONICAL_OTS_HEX.slice(0, 64) + 'f2');
     expect(() => DetachedTimestampFile.deserialize(bad)).toThrow(DeserializationError);
   });
@@ -149,7 +149,7 @@ describe('DetachedTimestampFile — fromBytes / fromHash', () => {
     expect(() => DetachedTimestampFile.fromBytes(new OpReverse(), new Uint8Array(4))).toThrow(TypeError);
   });
 
-  it('fromBytes no acepta ArrayBuffer (evita hashear vacío silenciosamente)', () => {
+  it('fromBytes rejects ArrayBuffer (avoids silently hashing nothing)', () => {
     // @ts-expect-error ArrayBuffer no es Uint8Array
     expect(() => DetachedTimestampFile.fromBytes(new OpSHA256(), new ArrayBuffer(8))).toThrow(TypeError);
   });
@@ -164,7 +164,7 @@ describe('DetachedTimestampFile — fromBytes / fromHash', () => {
   });
 });
 
-describe('DetachedTimestampFile — bloqueo SHA-1/RIPEMD-160 en creación (M3)', () => {
+describe('DetachedTimestampFile — SHA-1/RIPEMD-160 blocked at creation (M3)', () => {
   it('fromBytes con OpSHA1 lanza WeakHashError', () => {
     expect(() => DetachedTimestampFile.fromBytes(new OpSHA1(), new Uint8Array(10))).toThrow(WeakHashError);
   });
@@ -177,8 +177,8 @@ describe('DetachedTimestampFile — bloqueo SHA-1/RIPEMD-160 en creación (M3)',
     expect(() => DetachedTimestampFile.fromBytesWithHashOp(new OpSHA1(), new Uint8Array(10))).toThrow(WeakHashError);
   });
 
-  it('fromBytesWithHashOp con no-CryptOp lanza TypeError (línea 116)', () => {
-    // @ts-expect-error argumento inválido deliberado
+  it('fromBytesWithHashOp with a non-CryptOp throws TypeError (line 116)', () => {
+    // @ts-expect-error deliberately invalid argument
     expect(() => DetachedTimestampFile.fromBytesWithHashOp({}, new Uint8Array(10))).toThrow(TypeError);
   });
 

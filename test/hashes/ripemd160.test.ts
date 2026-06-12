@@ -6,7 +6,7 @@ import { bytesToHex, textToBytes } from '../../src/utils.js';
 const hex = (s: string) => bytesToHex(ripemd160(textToBytes(s)));
 
 describe('ripemd160', () => {
-  it('cadena vacía', () => {
+  it('empty string', () => {
     expect(hex('')).toBe('9c1185a5c5e9fc54612808977ee8f548b2258d31');
   });
   it('"abc"', () => {

@@ -1,14 +1,14 @@
 // test/hashes/sha1.test.ts
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { createHash } from 'node:crypto'; // SOLO oráculo de test; no es dependencia de runtime
+import { createHash } from 'node:crypto'; // test oracle ONLY; not a runtime dependency
 import { sha1 } from '../../src/hashes/sha1.js';
 import { bytesToHex, textToBytes } from '../../src/utils.js';
 
 const hex = (s: string) => bytesToHex(sha1(textToBytes(s)));
 
 describe('sha1', () => {
-  it('cadena vacía', () => {
+  it('empty string', () => {
     expect(hex('')).toBe('da39a3ee5e6b4b0d3255bfef95601890afd80709');
   });
   it('"abc"', () => {
