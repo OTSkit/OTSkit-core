@@ -6,6 +6,15 @@
   },
   "license": "MIT",
   "description": "OpenTimestamps core library — TypeScript, zero-dependency, fail-closed.",
+  "keywords": [
+    "otskit",
+    "opentimestamps",
+    "bitcoin",
+    "typescript",
+    "timestamping",
+    "cryptography",
+    "zero-dependency"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/OTSkit/OTSkit-core.git"

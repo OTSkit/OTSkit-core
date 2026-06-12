@@ -42,7 +42,7 @@ Requires Node.js ≥ 20.
 
 ---
 
-> **Note on confirmation times:** After submitting a timestamp, the `.ots` proof starts as `pending` — it references a calendar server but has no blockchain attestation yet. Bitcoin confirmations typically arrive within **10–60 minutes**, but can take **several hours** depending on network congestion. This is normal. A pending proof is not a failed proof.
+> **Note on confirmation times:** After submitting a timestamp, the `.ots` proof starts as `pending` — it references a calendar server but has no blockchain attestation yet. Bitcoin confirmations typically arrive within **10–60 minutes**, but can take **several hours** during network congestion. A pending proof is not a failed proof.
 
 ---
 
@@ -236,4 +236,4 @@ All contributions must preserve the fail-closed philosophy: strict input validat
 
 ## License
 
-MIT © 2026 OTSkit contributors — see [LICENSE](LICENSE).
+MIT © OTSkit contributors — see [LICENSE](LICENSE).
