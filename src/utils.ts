@@ -22,8 +22,8 @@ const HEX_TABLE = Array.from({ length: 256 }, (_, b) => b.toString(16).padStart(
 /** Convierte bytes en cadena hex en minúsculas. */
 export function bytesToHex(bytes: Uint8Array): string {
   let s = '';
-  for (let i = 0; i < bytes.length; i++) {
-    s += HEX_TABLE[bytes[i]!];
+  for (const byte of bytes) {
+    s += HEX_TABLE[byte];
   }
   return s;
 }

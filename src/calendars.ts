@@ -46,7 +46,7 @@ export const DEFAULT_AGGREGATOR_URLS = [
 
 /** Escapes a literal string for safe interpolation into a RegExp. */
 function escapeRegExp(literal: string): string {
-  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 /**
@@ -55,5 +55,5 @@ function escapeRegExp(literal: string): string {
  * Used by `parseCalendarUri`. Kept as derived data so the domain list stays canonical.
  */
 export const CALENDAR_ALLOWLIST: ReadonlyArray<RegExp> = TRUSTED_CALENDAR_DOMAINS.map(
-  (domain) => new RegExp(`\\.${escapeRegExp(domain)}$`, 'i'),
+  (domain) => new RegExp(String.raw`\.${escapeRegExp(domain)}$`, 'i'),
 );

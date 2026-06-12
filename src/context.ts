@@ -126,8 +126,8 @@ export class StreamSerializationContext {
   }
 
   writeBytes(value: Uint8Array): void {
-    for (let i = 0; i < value.length; i++) {
-      this.writeByte(value[i]!);
+    for (const byte of value) {
+      this.writeByte(byte);
     }
   }
 

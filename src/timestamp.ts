@@ -53,7 +53,7 @@ function opKey(op: Op): string {
 export class Timestamp {
   /** Digest de este nodo (copia defensiva, no comparte memoria con la entrada). */
   readonly msg: Uint8Array;
-  #attestations: Attestation[] = [];
+  readonly #attestations: Attestation[] = [];
   /** Ramas indexadas por la serialización canónica (hex) de su op. */
   readonly #ops = new Map<string, Branch>();
 
@@ -259,9 +259,8 @@ export class Timestamp {
   async verifyBitcoin(provider: BlockHeaderProvider): Promise<number> {
     for (const { msg, attestation } of this.allAttestations()) {
       if (attestation.kind === 'bitcoin') {
-        const att = attestation as BitcoinAttestation;
-        const rawHeader = await provider.getBlockHeader(att.height);
-        return verifyBitcoinAttestation(msg, att, rawHeader, att.height);
+        const rawHeader = await provider.getBlockHeader(attestation.height);
+        return verifyBitcoinAttestation(msg, attestation, rawHeader, attestation.height);
       }
     }
     throw new VerificationError('no Bitcoin attestation found in timestamp tree');

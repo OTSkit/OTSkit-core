@@ -104,8 +104,7 @@ function decodeAndValidateUri(bytes: Uint8Array): string {
     throw new InvalidUriError(`pending attestation URI exceeds ${MAX_URI_LENGTH} bytes`);
   }
   let uri = '';
-  for (let i = 0; i < bytes.length; i++) {
-    const byte = bytes[i]!;
+  for (const byte of bytes) {
     const char = String.fromCharCode(byte);
     if (!ALLOWED_URI_CHARS.has(char)) {
       throw new InvalidUriError(
