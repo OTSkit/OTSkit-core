@@ -14,7 +14,7 @@ function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
   return out;
 }
 
-/** Operación: un paso del árbol de prueba. Toma un mensaje y produce un resultado. */
+/** Operation: one step of the proof tree. Takes a message and produces a result. */
 export abstract class Op {
   static readonly MAX_RESULT_LENGTH = MAX_RESULT_LENGTH;
   static readonly MAX_MSG_LENGTH = MAX_MSG_LENGTH;
@@ -22,19 +22,19 @@ export abstract class Op {
   abstract readonly tag: number;
   abstract readonly tagName: string;
 
-  /** Aplica la operación. Lanza si el mensaje o el resultado exceden los límites. */
+  /** Applies the operation. Throws when the message or the result exceed the limits. */
   abstract call(msg: Uint8Array): Uint8Array;
-  /** Escribe la operación en el formato binario OTS. */
+  /** Writes the operation in the OTS binary format. */
   abstract serialize(ctx: StreamSerializationContext): void;
-  /** Igualdad estructural con otra operación. */
+  /** Structural equality with another operation. */
   abstract equals(other: Op): boolean;
 
-  /** Deserializa una operación leyendo su tag y despachando a la factoría correcta. */
+  /** Deserializes an operation by reading its tag and dispatching to the right factory. */
   static deserialize(ctx: StreamDeserializationContext): Op {
     return Op.deserializeFromTag(ctx, ctx.readByte());
   }
 
-  /** Igual que `deserialize`, pero con el tag ya leído del stream (lo usa el árbol Timestamp). */
+  /** Same as `deserialize`, but with the tag already read from the stream (used by the Timestamp tree). */
   static deserializeFromTag(ctx: StreamDeserializationContext, tag: number): Op {
     const factory = OP_BY_TAG.get(tag);
     if (factory === undefined) {
@@ -70,8 +70,8 @@ export abstract class OpBinary extends Op {
     if (!(arg instanceof Uint8Array)) {
       throw new TypeError('OpBinary arg must be a Uint8Array');
     }
-    // Copia defensiva: el arg forma la clave canónica de la op en el árbol Timestamp;
-    // si el caller mutara el buffer tras construir, la clave quedaría obsoleta.
+    // Defensive copy: the arg forms the op's canonical key in the Timestamp tree;
+    // if the caller mutated the buffer after construction, the key would go stale.
     this.arg = arg.slice();
   }
 
@@ -138,13 +138,13 @@ export class OpReverse extends OpUnary {
   }
 }
 
-/** Convierte el mensaje en su representación hex ASCII. */
+/** Converts the message into its ASCII hex representation. */
 export class OpHexlify extends OpUnary {
   static readonly TAG = 0xf3;
   readonly tag = OpHexlify.TAG;
   readonly tagName = 'hexlify';
 
-  // El resultado mide el doble que el mensaje; el límite de mensaje es la mitad.
+  // The result is twice the size of the message; the message limit is half.
   protected override get maxMsgLength(): number {
     return MAX_RESULT_LENGTH / 2;
   }
@@ -159,7 +159,7 @@ export class OpHexlify extends OpUnary {
   }
 }
 
-/** Operación criptográfica: salida de tamaño fijo, siempre <= MAX_RESULT_LENGTH. */
+/** Cryptographic operation: fixed-size output, always <= MAX_RESULT_LENGTH. */
 export abstract class CryptOp extends OpUnary {
   abstract readonly digestLength: number;
   protected abstract hash(msg: Uint8Array): Uint8Array;
@@ -170,11 +170,11 @@ export abstract class CryptOp extends OpUnary {
   }
 
   /**
-   * Hashea el contenido COMPLETO de un fichero (longitud arbitraria) con el algoritmo
-   * de esta operación. A diferencia de `call`, NO aplica el límite `MAX_MSG_LENGTH`:
-   * `call` transforma digests dentro del árbol de prueba (≤ 4096 bytes), mientras que
-   * `hashFile` recibe el contenido íntegro del fichero a sellar, que puede ser de
-   * cualquier tamaño. Lo usa `DetachedTimestampFile.fromBytes`.
+   * Hashes the FULL content of a file (arbitrary length) with this operation's
+   * algorithm. Unlike `call`, it does NOT apply the `MAX_MSG_LENGTH` limit:
+   * `call` transforms digests inside the proof tree (≤ 4096 bytes), whereas
+   * `hashFile` receives the entire content of the file being sealed, which can be
+   * any size. Used by `DetachedTimestampFile.fromBytes`.
    */
   hashFile(data: Uint8Array): Uint8Array {
     if (!(data instanceof Uint8Array)) {
@@ -229,7 +229,7 @@ const unary = (ctor: new () => Op): OpFactory => () => new ctor();
 const binary = (ctor: new (arg: Uint8Array) => OpBinary): OpFactory => (ctx) =>
   new ctor(ctx.readVarbytes(MAX_RESULT_LENGTH, 1));
 
-/** @internal — exportada solo para tests; NO forma parte de la API pública. */
+/** @internal — exported for tests only; NOT part of the public API. */
 export function buildTagTable(entries: ReadonlyArray<readonly [number, OpFactory]>): ReadonlyMap<number, OpFactory> {
   const map = new Map<number, OpFactory>();
   for (const [tag, factory] of entries) {

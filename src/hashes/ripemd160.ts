@@ -1,9 +1,9 @@
 // src/hashes/ripemd160.ts
 
-// RIPEMD-160, TypeScript puro y síncrono. Little-endian.
+// RIPEMD-160, pure synchronous TypeScript. Little-endian.
 const rol = (x: number, n: number): number => (x << n) | (x >>> (32 - n));
 
-// Orden de palabras y rotaciones (línea izquierda / derecha)
+// Word order and rotations (left / right line)
 const ZL = [
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
   7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,

@@ -4,29 +4,29 @@ import { OpAppend, OpPrepend, OpSHA256 } from './ops.js';
 import { EmptyMerkleTreeError } from './errors.js';
 
 /**
- * Une dos timestamps en un nodo de concatenación compartido y devuelve la punta
+ * Joins two timestamps into a shared concatenation node and returns the tip
  * `SHA256(left.msg ++ right.msg)`.
  *
- * `left` y `right` se mutan in-place: ambos quedan apuntando al MISMO objeto de
- * concatenación (left con `OpAppend(right.msg)`, right con `OpPrepend(left.msg)`),
- * de modo que cualquier attestation sellada más arriba sea alcanzable desde ambas hojas.
+ * `left` and `right` are mutated in-place: both end up pointing at the SAME
+ * concatenation object (left via `OpAppend(right.msg)`, right via `OpPrepend(left.msg)`),
+ * so any attestation sealed above it is reachable from both leaves.
  */
 export function catSha256(left: Timestamp, right: Timestamp): Timestamp {
   if (!(left instanceof Timestamp) || !(right instanceof Timestamp)) {
     throw new TypeError('catSha256 requires two Timestamps');
   }
-  // right gana OpPrepend(left.msg) → nodo de concatenación (msg = left.msg ++ right.msg)
+  // right gets OpPrepend(left.msg) → concatenation node (msg = left.msg ++ right.msg)
   const concat = right.add(new OpPrepend(left.msg));
-  // left gana OpAppend(right.msg) apuntando AL MISMO nodo concat (cross-link)
+  // left gets OpAppend(right.msg) pointing at the SAME concat node (cross-link)
   left.addExisting(new OpAppend(right.msg), concat);
-  // SHA256 sobre la concatenación; esta punta sube a la siguiente ronda del árbol
+  // SHA256 over the concatenation; this tip moves up to the next round of the tree
   return concat.add(new OpSHA256());
 }
 
 /**
- * Como `catSha256` pero con doble SHA256 (estilo Bitcoin):
- * `SHA256(SHA256(left.msg ++ right.msg))`. El segundo `add(OpSHA256)` deduplica por
- * clave canónica, así que repetir la llamada no crea nodos extra (arregla B2).
+ * Like `catSha256` but with double SHA256 (Bitcoin-style):
+ * `SHA256(SHA256(left.msg ++ right.msg))`. The second `add(OpSHA256)` deduplicates by
+ * canonical key, so repeating the call creates no extra nodes (fixes B2).
  */
 export function catSha256d(left: Timestamp, right: Timestamp): Timestamp {
   const sha256Node = catSha256(left, right);
@@ -34,16 +34,16 @@ export function catSha256d(left: Timestamp, right: Timestamp): Timestamp {
 }
 
 /**
- * Construye un árbol de Merkle (Merkle-Mountain-Range) a partir de una lista de
- * timestamps y devuelve la raíz. Los timestamps de entrada se mutan in-place: al
- * sellar una attestation en la raíz, cada hoja queda con el camino completo hacia ella.
+ * Builds a Merkle tree (Merkle-Mountain-Range) from a list of timestamps and
+ * returns the root. The input timestamps are mutated in-place: once an
+ * attestation is sealed at the root, every leaf holds the full path to it.
  *
- * El algoritmo de emparejamiento es consensus-critical: NO cambiarlo. Reproduce el MMR
- * del `merkle.js` original (cada ronda empareja elementos adyacentes; el sobrante impar
- * pasa intacto a la siguiente ronda).
+ * The pairing algorithm is consensus-critical: do NOT change it. It reproduces
+ * the MMR of the original `merkle.js` (each round pairs adjacent elements; an
+ * odd leftover passes through untouched to the next round).
  *
- * @throws {EmptyMerkleTreeError} si la lista está vacía.
- * @throws {TypeError} si algún elemento no es un Timestamp.
+ * @throws {EmptyMerkleTreeError} if the list is empty.
+ * @throws {TypeError} if any element is not a Timestamp.
  */
 export function makeMerkleTree(timestamps: readonly Timestamp[]): Timestamp {
   if (timestamps.length === 0) {
@@ -62,7 +62,7 @@ export function makeMerkleTree(timestamps: readonly Timestamp[]): Timestamp {
       if (i + 1 < round.length) {
         next.push(catSha256(round[i]!, round[i + 1]!));
       } else {
-        next.push(round[i]!); // sobrante impar: pasa intacto a la siguiente ronda
+        next.push(round[i]!); // odd leftover: passes through untouched to the next round
       }
     }
     round = next;

@@ -19,10 +19,10 @@ const ALLOWED_URI_CHARS = new Set(
 export { CALENDAR_ALLOWLIST };
 
 /**
- * Valida una URI de calendario antes de usarla en una petición de red.
- * Exige HTTPS, sin credenciales, sin query string ni fragment, y que el host coincida
- * con la allowlist (por defecto `CALENDAR_ALLOWLIST`).
- * @throws InvalidUriError ante cualquier incumplimiento
+ * Validates a calendar URI before using it in a network request.
+ * Requires HTTPS, no credentials, no query string or fragment, and a host matching
+ * the allowlist (defaults to `CALENDAR_ALLOWLIST`).
+ * @throws InvalidUriError on any violation
  */
 export function parseCalendarUri(
   uri: string,
@@ -58,31 +58,31 @@ const PENDING_TAG = new Uint8Array([0x83, 0xdf, 0xe3, 0x0d, 0x2e, 0xf9, 0x0c, 0x
 const BITCOIN_TAG = new Uint8Array([0x05, 0x88, 0x96, 0x0d, 0x73, 0xd7, 0x19, 0x01]);
 const LITECOIN_TAG = new Uint8Array([0x06, 0x86, 0x9a, 0x0d, 0x73, 0xd7, 0x1b, 0x45]);
 
-/** Commitment registrado en un calendario remoto; se guarda la URI para completarlo más tarde. */
+/** Commitment registered on a remote calendar; the URI is kept to complete it later. */
 export interface PendingAttestation {
   readonly kind: 'pending';
   readonly tag: Uint8Array;
-  /** Vista ASCII validada de la URI. */
+  /** Validated ASCII view of the URI. */
   readonly uri: string;
-  /** Bytes originales de la URI (canónicos para serializar). */
+  /** Original URI bytes (canonical for serialization). */
   readonly uriBytes: Uint8Array;
 }
 
-/** El commitment es el merkleroot de la cabecera del bloque Bitcoin de esta altura. */
+/** The commitment is the merkleroot of the Bitcoin block header at this height. */
 export interface BitcoinAttestation {
   readonly kind: 'bitcoin';
   readonly tag: Uint8Array;
   readonly height: number;
 }
 
-/** Igual que Bitcoin, sobre la cadena Litecoin. */
+/** Same as Bitcoin, on the Litecoin chain. */
 export interface LitecoinAttestation {
   readonly kind: 'litecoin';
   readonly tag: Uint8Array;
   readonly height: number;
 }
 
-/** Tag no reconocido; se preservan tag y payload opacos para round-trip exacto. */
+/** Unrecognized tag; tag and payload are preserved opaquely for exact round-trips. */
 export interface UnknownAttestation {
   readonly kind: 'unknown';
   readonly tag: Uint8Array;
@@ -95,7 +95,7 @@ export type Attestation =
   | LitecoinAttestation
   | UnknownAttestation;
 
-/** Valida y decodifica los bytes de una URI ASCII restringida. Lanza si vacía o con byte no permitido. */
+/** Validates and decodes the bytes of a restricted ASCII URI. Throws when empty or on a disallowed byte. */
 function decodeAndValidateUri(bytes: Uint8Array): string {
   if (bytes.length === 0) {
     throw new InvalidUriError('pending attestation URI is empty');
@@ -122,7 +122,7 @@ function checkHeight(height: number): void {
   }
 }
 
-/** Crea una PendingAttestation validando la URI. `uriBytes` se derivan de `uri` (UTF-8/ASCII). */
+/** Creates a PendingAttestation, validating the URI. `uriBytes` derive from `uri` (UTF-8/ASCII). */
 export function makePending(uri: string): PendingAttestation {
   const uriBytes = textToBytes(uri);
   const validated = decodeAndValidateUri(uriBytes);
@@ -143,9 +143,9 @@ export function makeUnknown(tag: Uint8Array, payload: Uint8Array): UnknownAttest
   if (!(tag instanceof Uint8Array) || tag.length !== TAG_SIZE) {
     throw new RangeError('unknown attestation tag must be exactly 8 bytes');
   }
-  // Invariante que `compareAttestations` da por cierta: un tag conocido nunca pertenece
-  // a un 'unknown'. Sin esta guarda, comparar un unknown-con-tag-conocido contra el tipo
-  // conocido real entraría al case equivocado del switch y reventaría.
+  // Invariant `compareAttestations` relies on: a known tag never belongs to an
+  // 'unknown'. Without this guard, comparing an unknown-with-known-tag against the
+  // real known type would enter the wrong switch case and blow up.
   if (bytesEqual(tag, PENDING_TAG) || bytesEqual(tag, BITCOIN_TAG) || bytesEqual(tag, LITECOIN_TAG)) {
     throw new RangeError('unknown attestation tag must not be a known attestation tag');
   }
@@ -155,7 +155,7 @@ export function makeUnknown(tag: Uint8Array, payload: Uint8Array): UnknownAttest
   return { kind: 'unknown', tag: tag.slice(), payload: payload.slice() };
 }
 
-/** Deserializa una atestación: `tag[8] + varbytes(payload)`, payload parseado en sub-contexto aislado. */
+/** Deserializes an attestation: `tag[8] + varbytes(payload)`, payload parsed in an isolated sub-context. */
 export function deserializeAttestation(ctx: StreamDeserializationContext): Attestation {
   const tag = ctx.read(TAG_SIZE).slice();
   const payload = ctx.readVarbytes(MAX_PAYLOAD_SIZE);
@@ -170,16 +170,16 @@ export function deserializeAttestation(ctx: StreamDeserializationContext): Attes
   } else if (bytesEqual(tag, LITECOIN_TAG)) {
     attestation = { kind: 'litecoin', tag, height: payloadCtx.readVaruint() };
   } else {
-    // Tag desconocido: el payload entero es opaco; no se parsea ni se exige formato interno.
+    // Unknown tag: the whole payload is opaque; not parsed, no internal format required.
     return { kind: 'unknown', tag, payload: payload.slice() };
   }
 
-  // Tipos conocidos: ningún byte sobrante permitido en el sub-contexto (fail-closed).
+  // Known types: no leftover bytes allowed in the sub-context (fail-closed).
   payloadCtx.assertEof();
   return attestation;
 }
 
-/** Escribe el payload interno (sin el tag ni el envoltorio varbytes externo). */
+/** Writes the inner payload (without the tag or the outer varbytes wrapper). */
 function serializePayload(ctx: StreamSerializationContext, att: Attestation): void {
   switch (att.kind) {
     case 'pending':
@@ -195,7 +195,7 @@ function serializePayload(ctx: StreamSerializationContext, att: Attestation): vo
   }
 }
 
-/** Serializa una atestación: `tag[8] + varbytes(payload)`. */
+/** Serializes an attestation: `tag[8] + varbytes(payload)`. */
 export function serializeAttestation(ctx: StreamSerializationContext, att: Attestation): void {
   ctx.writeBytes(att.tag);
   const payloadCtx = new StreamSerializationContext();
@@ -204,9 +204,9 @@ export function serializeAttestation(ctx: StreamSerializationContext, att: Attes
 }
 
 /**
- * Orden total de atestaciones: primero por bytes del tag; a igual tag, por contenido.
- * Un tag igual implica el mismo `kind` (los tags conocidos son reservados, así que un
- * `unknown` nunca coincide con un tag conocido), por lo que los accesos por kind son seguros.
+ * Total order of attestations: first by tag bytes; on equal tags, by content.
+ * An equal tag implies the same `kind` (known tags are reserved, so an `unknown`
+ * never matches a known tag), which makes the per-kind accesses safe.
  */
 export function compareAttestations(a: Attestation, b: Attestation): number {
   const deltaTag = compareBytes(a.tag, b.tag);
@@ -224,7 +224,7 @@ export function compareAttestations(a: Attestation, b: Attestation): number {
   }
 }
 
-/** Igualdad estructural: mismo `kind`, mismo tag y mismo contenido. */
+/** Structural equality: same `kind`, same tag and same content. */
 export function attestationsEqual(a: Attestation, b: Attestation): boolean {
   if (a.kind !== b.kind || !bytesEqual(a.tag, b.tag)) {
     return false;
@@ -248,19 +248,19 @@ const TIME_SIZE = 4;
 
 const MERKLEROOT_RE = /^[0-9a-fA-F]{64}$/;
 
-/** Cabecera de bloque mínima necesaria para verificar una atestación. */
+/** Minimal block header needed to verify an attestation. */
 export interface BlockHeader {
-  /** Merkleroot en hex de 64 caracteres (32 bytes). */
+  /** Merkleroot as a 64-char hex string (32 bytes). */
   readonly merkleroot: string;
-  /** Marca de tiempo del bloque (entero positivo). */
+  /** Block timestamp (positive integer). */
   readonly time: number;
 }
 
 /**
- * Verifica un digest de 32 bytes contra el merkle root de una cabecera de bloque cruda (80 bytes).
- * El merkle root se extrae de los bytes 36..68 en byte order INTERNO de Bitcoin (el mismo que
- * usa el protocolo OTS internamente), que es el INVERSO del orden de display de las APIs Bitcoin
- * (block explorers, `getblock` RPC). Devuelve el timestamp del bloque en éxito.
+ * Verifies a 32-byte digest against the merkle root of a raw block header (80 bytes).
+ * The merkle root is extracted from bytes 36..68 in Bitcoin's INTERNAL byte order (the
+ * same one the OTS protocol uses internally), which is the REVERSE of the display order
+ * of Bitcoin APIs (block explorers, `getblock` RPC). Returns the block timestamp on success.
  */
 export function verifyAgainstRawHeader(digest: Uint8Array, rawHeader: Uint8Array): number {
   if (digest.length !== MERKLEROOT_SIZE) {
@@ -284,9 +284,9 @@ export function verifyAgainstRawHeader(digest: Uint8Array, rawHeader: Uint8Array
 }
 
 /**
- * Verifica un digest contra una cabecera de bloque cruda, exigiendo además que la altura
- * del header coincida con la de la attestation. Previene el backdating attack donde se
- * verifica contra un bloque distinto al que declara la attestation.
+ * Verifies a digest against a raw block header, additionally requiring the header
+ * height to match the attestation's. Prevents the backdating attack where verification
+ * runs against a different block than the one the attestation declares.
  */
 export function verifyBitcoinAttestation(
   digest: Uint8Array,
@@ -303,8 +303,8 @@ export function verifyBitcoinAttestation(
 }
 
 /**
- * Verifica un digest de 32 bytes contra el merkleroot de una cabecera de bloque.
- * Devuelve `block.time` en éxito; lanza `VerificationError` ante cualquier discrepancia.
+ * Verifies a 32-byte digest against the merkleroot of a block header.
+ * Returns `block.time` on success; throws `VerificationError` on any mismatch.
  */
 export function verifyAgainstBlockheader(digest: Uint8Array, block: BlockHeader): number {
   if (digest.length !== 32) {

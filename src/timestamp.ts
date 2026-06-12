@@ -19,42 +19,42 @@ import {
   VerificationError,
 } from './errors.js';
 
-/** Proveedor de cabeceras de bloque crudas. El caller gestiona la red; `@otskit/core` no hace fetch. */
+/** Provider of raw block headers. The caller manages the network; `@otskit/core` does no fetching. */
 export interface BlockHeaderProvider {
-  /** Devuelve los 80 bytes crudos del header del bloque a la altura indicada. */
+  /** Returns the 80 raw bytes of the block header at the given height. */
   getBlockHeader(height: number): Promise<Uint8Array>;
 }
 
-/** Profundidad máxima del árbol al deserializar (defensa contra stack overflow). */
+/** Maximum tree depth while deserializing (stack-overflow defense). */
 const MAX_TREE_DEPTH = 256;
 
-/** Una rama del árbol: una operación y el sub-timestamp de su resultado. */
+/** A branch of the tree: one operation and the sub-timestamp of its result. */
 export interface Branch {
   readonly op: Op;
   readonly stamp: Timestamp;
 }
 
-/** Serialización binaria canónica de una op (tag [+ arg]). */
+/** Canonical binary serialization of an op (tag [+ arg]). */
 function opToBytes(op: Op): Uint8Array {
   const ctx = new StreamSerializationContext();
   op.serialize(ctx);
   return ctx.getOutput();
 }
 
-/** Clave canónica de una op para el mapa de ramas: hex de su serialización. */
+/** Canonical key of an op for the branch map: hex of its serialization. */
 function opKey(op: Op): string {
   return bytesToHex(opToBytes(op));
 }
 
 /**
- * Nodo del árbol de prueba: un mensaje (`msg`), sus attestations directas y sus ramas
- * (cada rama es una op que transforma `msg` y apunta a un sub-timestamp).
+ * Proof tree node: a message (`msg`), its direct attestations and its branches
+ * (each branch is an op that transforms `msg` and points at a sub-timestamp).
  */
 export class Timestamp {
-  /** Digest de este nodo (copia defensiva, no comparte memoria con la entrada). */
+  /** Digest of this node (defensive copy, shares no memory with the input). */
   readonly msg: Uint8Array;
   readonly #attestations: Attestation[] = [];
-  /** Ramas indexadas por la serialización canónica (hex) de su op. */
+  /** Branches indexed by the canonical (hex) serialization of their op. */
   readonly #ops = new Map<string, Branch>();
 
   constructor(msg: Uint8Array) {
@@ -67,12 +67,12 @@ export class Timestamp {
     this.msg = msg.slice();
   }
 
-  /** Sellos directos sobre `msg`. Array de solo lectura; usar `addAttestation()` para añadir. */
+  /** Direct seals over `msg`. Read-only array; use `addAttestation()` to add. */
   get attestations(): ReadonlyArray<Attestation> {
     return Object.freeze(this.#attestations.slice());
   }
 
-  /** Añade una attestation validando que su `kind` es uno de los tipos conocidos. */
+  /** Adds an attestation, validating that its `kind` is one of the known types. */
   addAttestation(att: Attestation): void {
     if (att == null || typeof att !== 'object') {
       throw new TypeError('addAttestation requires a valid Attestation object');
@@ -84,7 +84,7 @@ export class Timestamp {
     this.#attestations.push(att);
   }
 
-  /** El digest de este nodo (copia: mutar el resultado no afecta al árbol). */
+  /** The digest of this node (a copy: mutating the result does not affect the tree). */
   getDigest(): Uint8Array {
     return this.msg.slice();
   }
@@ -95,9 +95,9 @@ export class Timestamp {
   }
 
   /**
-   * Deserializa un Timestamp. El formato no incluye el mensaje sobre el que opera,
-   * así que hay que aportarlo (`initialMsg`) para recalcular los resultados de las ops.
-   * @param depth profundidad actual; protege contra árboles maliciosamente profundos.
+   * Deserializes a Timestamp. The format does not include the message it operates
+   * on, so it must be supplied (`initialMsg`) to recompute the op results.
+   * @param depth current depth; protects against maliciously deep trees.
    */
   static deserialize(
     ctx: StreamDeserializationContext,
@@ -135,7 +135,7 @@ export class Timestamp {
     this.#ops.set(opKey(op), { op, stamp });
   }
 
-  /** Serializa este nodo en orden canónico (determinista byte-a-byte). */
+  /** Serializes this node in canonical order (byte-for-byte deterministic). */
   serialize(ctx: StreamSerializationContext): void {
     const attestations = [...this.#attestations].sort(compareAttestations);
     const branches = [...this.#ops.values()].sort((a, b) =>
@@ -161,8 +161,8 @@ export class Timestamp {
   }
 
   /**
-   * Añade una op a este nodo y devuelve el sub-timestamp de su resultado.
-   * Si la op (por contenido) ya existe, devuelve la rama existente.
+   * Adds an op to this node and returns the sub-timestamp of its result.
+   * If the op (by content) already exists, returns the existing branch.
    */
   add(op: Op): Timestamp {
     const key = opKey(op);
@@ -176,11 +176,11 @@ export class Timestamp {
   }
 
   /**
-   * Vincula `op` a un sub-timestamp YA EXISTENTE, compartiendo el objeto (no crea uno nuevo).
-   * A diferencia de `add`, hace que esta rama apunte al mismo `Timestamp` que otra rama
-   * (de otro nodo) ya construyó, de modo que las attestations añadidas más arriba sean
-   * alcanzables desde ambos caminos. Lo usa el árbol Merkle para el cross-link izquierda/derecha.
-   * Falla (fail-closed) si `stamp` no es un Timestamp o si `op.call(this.msg)` no coincide con `stamp.msg`.
+   * Links `op` to an ALREADY EXISTING sub-timestamp, sharing the object (creates no new one).
+   * Unlike `add`, it makes this branch point at the same `Timestamp` another branch
+   * (of another node) already built, so attestations added higher up are reachable
+   * from both paths. Used by the Merkle tree for the left/right cross-link.
+   * Fails (fail-closed) if `stamp` is not a Timestamp or `op.call(this.msg)` does not match `stamp.msg`.
    */
   addExisting(op: Op, stamp: Timestamp): Timestamp {
     if (!(stamp instanceof Timestamp)) {
@@ -193,7 +193,7 @@ export class Timestamp {
     return stamp;
   }
 
-  /** Incorpora las attestations y ramas de `other` (mismo `msg`) en este timestamp. */
+  /** Absorbs the attestations and branches of `other` (same `msg`) into this timestamp. */
   merge(other: Timestamp): void {
     if (!(other instanceof Timestamp)) {
       throw new MergeError('can only merge Timestamps together');
@@ -217,7 +217,7 @@ export class Timestamp {
     }
   }
 
-  /** Todas las attestations del árbol con el msg de su nodo (sin pérdida de datos). */
+  /** All attestations in the tree with their node's msg (no data loss). */
   allAttestations(): Array<{ msg: Uint8Array; attestation: Attestation }> {
     const result: Array<{ msg: Uint8Array; attestation: Attestation }> = [];
     for (const attestation of this.#attestations) {
@@ -229,19 +229,19 @@ export class Timestamp {
     return result;
   }
 
-  /** Todas las attestations del árbol (sin el msg asociado). */
+  /** All attestations in the tree (without the associated msg). */
   getAttestations(): Attestation[] {
     return this.allAttestations().map((entry) => entry.attestation);
   }
 
-  /** Verdadero si el árbol contiene al menos una attestation Bitcoin. Solo comprueba presencia, no criptografía. */
+  /** True if the tree holds at least one Bitcoin attestation. Checks presence only, not cryptography. */
   hasBitcoinAttestation(): boolean {
     return this.allAttestations().some(({ attestation }) => attestation.kind === 'bitcoin');
   }
 
   /**
-   * @deprecated Usa `hasBitcoinAttestation()` para comprobar presencia, o `verifyBitcoin(provider)`
-   * para verificación criptográfica real. Esta función solo comprueba presencia de datos (no verifica).
+   * @deprecated Use `hasBitcoinAttestation()` to check presence, or `verifyBitcoin(provider)`
+   * for real cryptographic verification. This function only checks data presence (it does not verify).
    */
   isTimestampComplete(): boolean {
     return this.allAttestations().some(
@@ -250,11 +250,11 @@ export class Timestamp {
   }
 
   /**
-   * Verificación criptográfica real: localiza la primera attestation Bitcoin del árbol y comprueba
-   * que el digest del nodo coincide con el merkle root del header a esa altura.
-   * El caller aporta el provider; esta función no hace ningún fetch de red.
-   * @returns block.time del bloque confirmador
-   * @throws VerificationError si no hay attestation Bitcoin o la verificación falla
+   * Real cryptographic verification: finds the first Bitcoin attestation in the tree and checks
+   * that the node digest matches the merkle root of the header at that height.
+   * The caller supplies the provider; this function performs no network fetches.
+   * @returns block.time of the confirming block
+   * @throws VerificationError when there is no Bitcoin attestation or verification fails
    */
   async verifyBitcoin(provider: BlockHeaderProvider): Promise<number> {
     for (const { msg, attestation } of this.allAttestations()) {
@@ -266,7 +266,7 @@ export class Timestamp {
     throw new VerificationError('no Bitcoin attestation found in timestamp tree');
   }
 
-  /** Sub-timestamps que tienen attestations directas. */
+  /** Sub-timestamps that hold direct attestations. */
   directlyVerified(): Timestamp[] {
     if (this.attestations.length > 0) {
       return [this];
@@ -278,7 +278,7 @@ export class Timestamp {
     return result;
   }
 
-  /** Los mensajes de las hojas del árbol (nodos sin ops). */
+  /** The messages of the tree's leaves (nodes with no ops). */
   allTips(): Uint8Array[] {
     if (this.#ops.size === 0) {
       return [this.msg.slice()];

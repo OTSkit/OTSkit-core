@@ -2,7 +2,7 @@
 
 const HEX_RE = /^[0-9a-fA-F]*$/;
 
-/** Convierte una cadena hex en bytes. Exige longitud par y solo dígitos hex. */
+/** Converts a hex string into bytes. Requires even length and hex digits only. */
 export function hexToBytes(hex: string): Uint8Array {
   if (hex.length % 2 !== 0) {
     throw new Error(`hex string must have even length; got ${hex.length}`);
@@ -19,7 +19,7 @@ export function hexToBytes(hex: string): Uint8Array {
 
 const HEX_TABLE = Array.from({ length: 256 }, (_, b) => b.toString(16).padStart(2, '0'));
 
-/** Convierte bytes en cadena hex en minúsculas. */
+/** Converts bytes into a lowercase hex string. */
 export function bytesToHex(bytes: Uint8Array): string {
   let s = '';
   for (const byte of bytes) {
@@ -31,17 +31,17 @@ export function bytesToHex(bytes: Uint8Array): string {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
-/** Texto → bytes UTF-8. */
+/** Text → UTF-8 bytes. */
 export function textToBytes(text: string): Uint8Array {
   return encoder.encode(text);
 }
 
-/** Bytes UTF-8 → texto. Lanza si la secuencia es inválida (fatal). */
+/** UTF-8 bytes → text. Throws on invalid sequences (fatal). */
 export function bytesToText(bytes: Uint8Array): string {
   return decoder.decode(bytes);
 }
 
-/** Igualdad de bytes en tiempo dependiente del contenido (no constante). */
+/** Byte equality in content-dependent time (not constant-time). */
 export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
@@ -50,7 +50,7 @@ export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
-/** Orden lexicográfico de bytes: <0, 0, >0. */
+/** Lexicographic byte order: <0, 0, >0. */
 export function compareBytes(a: Uint8Array, b: Uint8Array): number {
   const min = Math.min(a.length, b.length);
   for (let i = 0; i < min; i++) {
@@ -60,7 +60,7 @@ export function compareBytes(a: Uint8Array, b: Uint8Array): number {
   return a.length - b.length;
 }
 
-/** Bytes aleatorios cripto-seguros. Fail-closed: lanza si no hay CSPRNG. */
+/** Cryptographically secure random bytes. Fail-closed: throws when no CSPRNG is available. */
 export function randBytes(n: number): Uint8Array {
   if (n < 0) throw new Error('randBytes: n must be >= 0');
   const out = new Uint8Array(n);

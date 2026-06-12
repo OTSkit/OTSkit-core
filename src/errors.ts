@@ -1,6 +1,6 @@
 // src/errors.ts
 
-/** Base de todos los errores al deserializar el formato binario OTS. */
+/** Base of all errors raised while deserializing the OTS binary format. */
 export class DeserializationError extends Error {
   constructor(message: string) {
     super(message);
@@ -9,30 +9,30 @@ export class DeserializationError extends Error {
   }
 }
 
-/** El número mágico de cabecera no coincide. */
+/** The header magic number does not match. */
 export class BadMagicError extends DeserializationError {}
 
-/** El stream terminó antes de leer los bytes esperados. */
+/** The stream ended before the expected bytes could be read. */
 export class TruncatedStreamError extends DeserializationError {}
 
-/** Un campo declara más bytes de los permitidos (defensa DoS). */
+/** A field declares more bytes than allowed (DoS defense). */
 export class OversizedDataError extends DeserializationError {}
 
-/** Un varuint LEB128 excede Number.MAX_SAFE_INTEGER. */
+/** A LEB128 varuint exceeds Number.MAX_SAFE_INTEGER. */
 export class VaruintOverflowError extends DeserializationError {}
 
-/** Un varuint LEB128 usa más bytes de los necesarios (encoding no canónico/overlong). */
+/** A LEB128 varuint uses more bytes than necessary (non-canonical/overlong encoding). */
 export class NonCanonicalVaruintError extends DeserializationError {}
 
-/** Quedan bytes tras terminar de deserializar lo esperado. */
+/** Bytes remain after deserializing everything expected. */
 export class TrailingGarbageError extends DeserializationError {}
 
-// --- Errores de operación (Fase 2b) ---
+// --- Operation errors (Phase 2b) ---
 
-/** Tag de operación no reconocido al deserializar. */
+/** Unrecognized operation tag while deserializing. */
 export class UnknownOperationError extends DeserializationError {}
 
-/** Base de los errores que ocurren al aplicar una operación (call). */
+/** Base of the errors raised while applying an operation (call). */
 export class OpExecutionError extends Error {
   constructor(message: string) {
     super(message);
@@ -41,18 +41,18 @@ export class OpExecutionError extends Error {
   }
 }
 
-/** El mensaje de entrada supera el máximo permitido por la operación. */
+/** The input message exceeds the maximum the operation allows. */
 export class MessageTooLongError extends OpExecutionError {}
 
-/** El resultado de la operación supera MAX_RESULT_LENGTH. */
+/** The operation result exceeds MAX_RESULT_LENGTH. */
 export class ResultTooLongError extends OpExecutionError {}
 
-// --- Errores de atestación (Fase 3) ---
+// --- Attestation errors (Phase 3) ---
 
-/** La URI de una PendingAttestation está vacía o contiene bytes no permitidos. */
+/** The URI of a PendingAttestation is empty or contains disallowed bytes. */
 export class InvalidUriError extends DeserializationError {}
 
-/** Fallo al verificar una atestación contra una cabecera de bloque. No es un error de parseo. */
+/** Failure verifying an attestation against a block header. Not a parsing error. */
 export class VerificationError extends Error {
   constructor(message: string) {
     super(message);
@@ -61,9 +61,9 @@ export class VerificationError extends Error {
   }
 }
 
-// --- Errores de timestamp (Fase 4) ---
+// --- Timestamp errors (Phase 4) ---
 
-/** Se intentó serializar un timestamp sin attestations ni ops. */
+/** Attempted to serialize a timestamp with no attestations and no ops. */
 export class EmptyTimestampError extends Error {
   constructor(message: string) {
     super(message);
@@ -72,7 +72,7 @@ export class EmptyTimestampError extends Error {
   }
 }
 
-/** Fusión de timestamps incompatibles (distinto mensaje, o el otro no es un Timestamp). */
+/** Merge of incompatible timestamps (different message, or the other is not a Timestamp). */
 export class MergeError extends Error {
   constructor(message: string) {
     super(message);
@@ -81,9 +81,9 @@ export class MergeError extends Error {
   }
 }
 
-// --- Errores de merkle (Fase 5) ---
+// --- Merkle errors (Phase 5) ---
 
-/** `makeMerkleTree` recibió una lista vacía de timestamps. */
+/** `makeMerkleTree` received an empty list of timestamps. */
 export class EmptyMerkleTreeError extends Error {
   constructor(message: string) {
     super(message);
@@ -92,12 +92,12 @@ export class EmptyMerkleTreeError extends Error {
   }
 }
 
-// --- Error de fichero detached (Fase 6) ---
+// --- Detached file error (Phase 6) ---
 
-/** El fichero .ots declara una versión mayor no soportada. */
+/** The .ots file declares an unsupported major version. */
 export class UnsupportedVersionError extends DeserializationError {}
 
-/** Se intentó crear un timestamp nuevo con un algoritmo de hash débil (SHA-1, RIPEMD-160). */
+/** Attempted to create a new timestamp with a weak hash algorithm (SHA-1, RIPEMD-160). */
 export class WeakHashError extends Error {
   constructor(message: string) {
     super(message);

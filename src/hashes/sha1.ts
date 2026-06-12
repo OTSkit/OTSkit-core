@@ -1,6 +1,6 @@
 // src/hashes/sha1.ts
 
-// SHA-1 (RFC 3174), TypeScript puro y síncrono.
+// SHA-1 (RFC 3174), pure synchronous TypeScript.
 const rotl = (x: number, n: number): number => (x << n) | (x >>> (32 - n));
 
 export function sha1(msg: Uint8Array): Uint8Array {

@@ -9,20 +9,20 @@ function isWeakHashOp(op: CryptOp): boolean {
 }
 
 /**
- * Cabecera mágica del formato .ots (31 bytes). Legible en un hexdump y reconocida como
- * 'data' por el comando `file`: \x00OpenTimestamps\x00\x00Proof\x00\xbf\x89\xe2\xe8\x84\xe8\x92\x94
+ * Magic header of the .ots format (31 bytes). Readable in a hexdump and recognized as
+ * 'data' by the `file` command: \x00OpenTimestamps\x00\x00Proof\x00\xbf\x89\xe2\xe8\x84\xe8\x92\x94
  */
 const HEADER_MAGIC = new Uint8Array([
   0x00, 0x4f, 0x70, 0x65, 0x6e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x73,
   0x00, 0x00, 0x50, 0x72, 0x6f, 0x6f, 0x66, 0x00, 0xbf, 0x89, 0xe2, 0xe8, 0x84, 0xe8, 0x92, 0x94,
 ]);
 
-/** Solo se soporta la versión mayor 1 (sin versión menor, a propósito). */
+/** Only major version 1 is supported (no minor version, on purpose). */
 const MAJOR_VERSION = 1;
 
 /**
- * Fichero `.ots` desacoplado: contiene la prueba de timestamp de OTRO fichero.
- * Inmutable: el op de hash y el árbol se fijan en construcción.
+ * Detached `.ots` file: holds the timestamp proof of ANOTHER file.
+ * Immutable: the hash op and the tree are fixed at construction.
  */
 export class DetachedTimestampFile {
   readonly fileHashOp: CryptOp;
@@ -44,12 +44,12 @@ export class DetachedTimestampFile {
     this.timestamp = timestamp;
   }
 
-  /** Digest del fichero sellado (copia defensiva: mutarla no afecta al objeto). */
+  /** Digest of the sealed file (defensive copy: mutating it does not affect the object). */
   fileDigest(): Uint8Array {
     return this.timestamp.getDigest();
   }
 
-  /** Escribe el fichero `.ots` en el contexto: magic → versión → op → digest → árbol. */
+  /** Writes the `.ots` file into the context: magic → version → op → digest → tree. */
   serialize(ctx: StreamSerializationContext): void {
     ctx.writeBytes(HEADER_MAGIC);
     ctx.writeVaruint(MAJOR_VERSION);
@@ -58,7 +58,7 @@ export class DetachedTimestampFile {
     this.timestamp.serialize(ctx);
   }
 
-  /** Serializa el fichero `.ots` completo a bytes. */
+  /** Serializes the whole `.ots` file to bytes. */
   serializeToBytes(): Uint8Array {
     const ctx = new StreamSerializationContext();
     this.serialize(ctx);
@@ -66,8 +66,8 @@ export class DetachedTimestampFile {
   }
 
   /**
-   * Lee un fichero `.ots` desde bytes. Único tipo de entrada: `Uint8Array` (fail-closed;
-   * elimina los 4 tipos del original y el bug `Array.from(ArrayBuffer) → []`).
+   * Reads a `.ots` file from bytes. Single input type: `Uint8Array` (fail-closed;
+   * drops the 4 input types of the original and the `Array.from(ArrayBuffer) → []` bug).
    */
   static deserialize(input: Uint8Array): DetachedTimestampFile {
     if (!(input instanceof Uint8Array)) {
@@ -89,7 +89,7 @@ export class DetachedTimestampFile {
     return new DetachedTimestampFile(op, timestamp);
   }
 
-  /** Crea un `.ots` nuevo hasheando el contenido completo de un fichero. Solo SHA-256. */
+  /** Creates a new `.ots` by hashing the full content of a file. SHA-256 only. */
   static fromBytes(fileHashOp: CryptOp, fileContent: Uint8Array): DetachedTimestampFile {
     if (!(fileHashOp instanceof CryptOp)) {
       throw new TypeError('DetachedTimestampFile.fromBytes: fileHashOp must be a CryptOp');
@@ -104,8 +104,8 @@ export class DetachedTimestampFile {
   }
 
   /**
-   * Crea un `.ots` nuevo hasheando el fichero con cualquier op, incluyendo hashes débiles.
-   * Requiere `{ allowWeakHashForLegacyInterop: true }` explícito para SHA-1 o RIPEMD-160.
+   * Creates a new `.ots` by hashing the file with any op, including weak hashes.
+   * Requires an explicit `{ allowWeakHashForLegacyInterop: true }` for SHA-1 or RIPEMD-160.
    */
   static fromBytesWithHashOp(
     fileHashOp: CryptOp,
@@ -124,12 +124,12 @@ export class DetachedTimestampFile {
     return new DetachedTimestampFile(fileHashOp, new Timestamp(digest));
   }
 
-  /** Crea un `.ots` nuevo a partir de un digest ya calculado del fichero. */
+  /** Creates a new `.ots` from an already-computed file digest. */
   static fromHash(fileHashOp: CryptOp, fileDigest: Uint8Array): DetachedTimestampFile {
     return new DetachedTimestampFile(fileHashOp, new Timestamp(fileDigest));
   }
 
-  /** Igualdad estructural con otro fichero `.ots`. */
+  /** Structural equality with another `.ots` file. */
   equals(other: unknown): boolean {
     return (
       other instanceof DetachedTimestampFile &&

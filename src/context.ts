@@ -9,7 +9,7 @@ import {
   TrailingGarbageError,
 } from './errors.js';
 
-/** Lector del formato binario OTS. Cursor privado, fail-closed. */
+/** Reader for the OTS binary format. Private cursor, fail-closed. */
 export class StreamDeserializationContext {
   readonly #buffer: Uint8Array;
   #counter = 0;
@@ -25,7 +25,7 @@ export class StreamDeserializationContext {
     return this.#counter;
   }
 
-  /** Lee `length` bytes. Lanza si el stream no tiene suficientes. */
+  /** Reads `length` bytes. Throws when the stream does not hold enough. */
   read(length: number): Uint8Array {
     if (length < 0) throw new RangeError('read length must be >= 0');
     if (this.#counter + length > this.#buffer.length) {
@@ -38,12 +38,12 @@ export class StreamDeserializationContext {
     return slice;
   }
 
-  /** Lee un único byte. */
+  /** Reads a single byte. */
   readByte(): number {
     return this.read(1)[0]!;
   }
 
-  /** Varuint LEB128: 7 bits por byte, bit 7 = continuación. */
+  /** LEB128 varuint: 7 bits per byte, bit 7 = continuation. */
   readVaruint(options?: { strict?: boolean }): number {
     const startOffset = this.#counter;
     let value = 0;
@@ -71,7 +71,7 @@ export class StreamDeserializationContext {
     return value;
   }
 
-  /** Lee un bloque varbytes. `maxLen` es obligatorio (defensa DoS). */
+  /** Reads a varbytes block. `maxLen` is mandatory (DoS defense). */
   readVarbytes(maxLen: number, minLen = 0): Uint8Array {
     const length = this.readVaruint();
     if (length > maxLen) {
@@ -83,7 +83,7 @@ export class StreamDeserializationContext {
     return this.read(length);
   }
 
-  /** Verifica el número mágico de cabecera. */
+  /** Verifies the header magic number. */
   assertMagic(expectedMagic: Uint8Array): void {
     const actual = this.read(expectedMagic.length);
     if (!bytesEqual(expectedMagic, actual)) {
@@ -91,7 +91,7 @@ export class StreamDeserializationContext {
     }
   }
 
-  /** Exige que no queden bytes sin consumir. */
+  /** Requires that no unconsumed bytes remain. */
   assertEof(): void {
     if (this.#counter < this.#buffer.length) {
       throw new TrailingGarbageError('trailing garbage after end of deserialized data');
@@ -99,7 +99,7 @@ export class StreamDeserializationContext {
   }
 }
 
-/** Escritor del formato binario OTS. Buffer con crecimiento ×2. */
+/** Writer for the OTS binary format. Buffer with ×2 growth. */
 export class StreamSerializationContext {
   #buffer = new Uint8Array(4096);
   #length = 0;
@@ -131,7 +131,7 @@ export class StreamSerializationContext {
     }
   }
 
-  /** Codifica un varuint LEB128. */
+  /** Encodes a LEB128 varuint. */
   writeVaruint(value: number): void {
     if (!Number.isSafeInteger(value) || value < 0) {
       throw new RangeError(`writeVaruint expects a safe non-negative integer; got ${value}`);
