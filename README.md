@@ -60,7 +60,7 @@ const fileContent = new Uint8Array(readFileSync('document.pdf'));
 const dtf = DetachedTimestampFile.fromBytes(new OpSHA256(), fileContent);
 
 // Register with an OpenTimestamps calendar (pending — will be upgraded to Bitcoin)
-dtf.timestamp.attestations.push(
+dtf.timestamp.addAttestation(
   makePending('https://alice.btc.calendar.opentimestamps.org'),
 );
 
@@ -79,7 +79,7 @@ const dtf = DetachedTimestampFile.deserialize(otsBytes);
 
 console.log('Hash algorithm:', dtf.fileHashOp.tagName);
 console.log('File digest:   ', Buffer.from(dtf.fileDigest()).toString('hex'));
-console.log('Complete:      ', dtf.timestamp.isTimestampComplete());
+console.log('Sealed:        ', dtf.timestamp.hasBitcoinAttestation());
 console.log('Attestations:  ', dtf.timestamp.getAttestations());
 ```
 
@@ -119,7 +119,7 @@ const dtfs = files.map(f =>
 
 // One Merkle root covers all documents — one calendar call, one blockchain entry
 const root = makeMerkleTree(dtfs.map(d => d.timestamp));
-root.attestations.push(makePending('https://alice.btc.calendar.opentimestamps.org'));
+root.addAttestation(makePending('https://alice.btc.calendar.opentimestamps.org'));
 
 // Each .ots file carries its own path to the shared root
 files.forEach((f, i) => writeFileSync(`${f}.ots`, dtfs[i]!.serializeToBytes()));
@@ -153,11 +153,13 @@ A node in the proof tree. Each node holds a digest (`msg`), direct attestations,
 | `.add(op)` | Apply an operation and return (or reuse) the sub-timestamp |
 | `.addExisting(op, stamp)` | Cross-link to an existing timestamp (used internally by Merkle) |
 | `.merge(other)` | Absorb attestations and branches from another timestamp with the same `msg` |
-| `.attestations` | Direct `Attestation[]` — push to add seals to this node |
+| `.attestations` | Direct seals on this node, as a read-only array |
+| `.addAttestation(att)` | Add a seal to this node |
 | `.getDigest()` | Defensive copy of `msg` |
 | `.getAttestations()` | All attestations anywhere in the tree |
 | `.allAttestations()` | All `{ msg, attestation }` pairs in the tree |
-| `.isTimestampComplete()` | `true` if a Bitcoin or Litecoin attestation exists |
+| `.hasBitcoinAttestation()` | `true` if a Bitcoin attestation is present. Presence only, no cryptography |
+| `.verifyBitcoin(provider)` | Verify the proof against a block header |
 | `.allTips()` | The leaf digests (nodes with no operations) |
 | `.equals(other)` | Deep structural equality |
 
