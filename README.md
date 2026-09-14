@@ -18,6 +18,8 @@ OpenTimestamps core library — TypeScript, zero-dependency, fail-closed.
 
 The next generation of [`@alexalves87/opentimestamps`](https://www.npmjs.com/package/@alexalves87/opentimestamps), rewritten from the ground up with TypeScript 6 strict mode, zero external dependencies, and a fail-closed security posture.
 
+> This is an independent implementation of the OpenTimestamps protocol. It is not affiliated with, endorsed by, or maintained by the OpenTimestamps project.
+
 ---
 
 ## What is OpenTimestamps?
